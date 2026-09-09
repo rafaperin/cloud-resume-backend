@@ -4,13 +4,14 @@ The Bicep template in this directory provisions the Cloud Resume Challenge resou
 
 ## Scope
 
-This first deployment creates only the development resource group:
+This deployment creates the development resource group and its storage account:
 
 - Name: rg-cloudresume-dev-eus2
 - Region: East US 2
 - Tags: Project, Environment, ManagedBy, and Owner
+- Storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, and TLS 1.2
 
-No paid services or billable SKUs are provisioned by this template.
+The Standard_LRS storage account is usage-billed. It is the lowest-cost replication option requested for this project; review the Azure estimate before running the deployment.
 
 ## Prerequisites
 
@@ -30,7 +31,7 @@ az deployment sub what-if \
   --parameters main.bicepparam
 ~~~
 
-Review the result. It should show one resource-group creation and no deletions or SKU changes.
+Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, and no deletions or SKU changes.
 
 ## Deploy
 

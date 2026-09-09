@@ -19,6 +19,8 @@ param environmentTag string = 'dev'
 @description('Value for the Owner resource tag.')
 param ownerTag string = 'rafael-ferreira'
 
+var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
+
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
@@ -30,6 +32,20 @@ resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   }
 }
 
+module storageAccount './storage.bicep' = {
+  name: 'storageAccountDeployment'
+  scope: resourceGroup
+  params: {
+    storageAccountName: storageAccountName
+    location: location
+    projectTag: projectTag
+    environmentTag: environmentTag
+    ownerTag: ownerTag
+  }
+}
+
 output resourceGroupId string = resourceGroup.id
 output resourceGroupName string = resourceGroup.name
 output resourceGroupLocation string = resourceGroup.location
+output storageAccountId string = storageAccount.outputs.storageAccountId
+output storageAccountName string = storageAccount.outputs.storageAccountName
