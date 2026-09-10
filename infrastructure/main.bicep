@@ -19,6 +19,10 @@ param environmentTag string = 'dev'
 @description('Value for the Owner resource tag.')
 param ownerTag string = 'rafael-ferreira'
 
+@description('Microsoft Entra object ID of the user who deploys frontend files.')
+@minLength(1)
+param deployerPrincipalId string
+
 var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
@@ -41,6 +45,7 @@ module storageAccount './storage.bicep' = {
     projectTag: projectTag
     environmentTag: environmentTag
     ownerTag: ownerTag
+    deployerPrincipalId: deployerPrincipalId
   }
 }
 

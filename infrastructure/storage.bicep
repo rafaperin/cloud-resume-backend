@@ -20,6 +20,14 @@ param environmentTag string
 @description('Value for the Owner resource tag.')
 param ownerTag string
 
+@description('Microsoft Entra object ID of the user who deploys frontend files.')
+param deployerPrincipalId string
+
+var storageBlobDataContributorRoleDefinitionId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+)
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
@@ -40,6 +48,16 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     minimumTlsVersion: 'TLS1_2'
     publicNetworkAccess: 'Enabled'
     supportsHttpsTrafficOnly: true
+  }
+}
+
+resource storageBlobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: storageAccount
+  name: guid(storageAccount.id, deployerPrincipalId, storageBlobDataContributorRoleDefinitionId)
+  properties: {
+    principalId: deployerPrincipalId
+    roleDefinitionId: storageBlobDataContributorRoleDefinitionId
+    principalType: 'User'
   }
 }
 
