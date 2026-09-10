@@ -49,3 +49,4 @@ output resourceGroupName string = resourceGroup.name
 output resourceGroupLocation string = resourceGroup.location
 output storageAccountId string = storageAccount.outputs.storageAccountId
 output storageAccountName string = storageAccount.outputs.storageAccountName
+output staticWebsiteUrl string = storageAccount.outputs.staticWebsiteUrl

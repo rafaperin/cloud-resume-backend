@@ -43,5 +43,17 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-08-01' = {
+  parent: storageAccount
+  name: 'default'
+  properties: {
+    staticWebsite: {
+      enabled: true
+      indexDocument: 'index.html'
+    }
+  }
+}
+
 output storageAccountId string = storageAccount.id
 output storageAccountName string = storageAccount.name
+output staticWebsiteUrl string = storageAccount.properties.primaryEndpoints.web
