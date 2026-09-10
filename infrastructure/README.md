@@ -47,3 +47,13 @@ After reviewing the what-if output, create the resource group:
 ~~~
 
 The deployment is incremental by default. Do not use complete mode.
+
+## Publish the frontend
+
+After a successful deployment, publish the contents of the repository's frontend directory to the static website's $web container:
+
+~~~sh
+./deploy.sh publish
+~~~
+
+The command reads the storage-account name from the `cloudresume-rg-deploy` Bicep deployment output, then uses Azure CLI data-plane authentication to upload the files. It overwrites blobs in $web with matching names. The deploying identity must have the Storage Blob Data Contributor role assigned by the Bicep deployment; allow a few minutes for a new role assignment to propagate.

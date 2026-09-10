@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [[ "$#" -ne 1 ]]; then
-  printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy>' >&2
+  printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|publish>' >&2
   exit 1
 fi
 
@@ -27,6 +27,25 @@ if [[ -z "$DEPLOYER_PRINCIPAL_ID" ]]; then
 fi
 
 case "$action" in
+  publish)
+    storage_account_name="$(az deployment sub show \
+      --name cloudresume-rg-deploy \
+      --query 'properties.outputs.storageAccountName.value' \
+      --output tsv)"
+
+    if [[ -z "$storage_account_name" ]]; then
+      printf '%s\n' 'Unable to determine the storage account. Run ./deploy.sh deploy first.' >&2
+      exit 1
+    fi
+
+    az storage blob upload-batch \
+      --account-name "$storage_account_name" \
+      --auth-mode login \
+      --destination '$web' \
+      --source "$project_root/frontend" \
+      --overwrite true
+    exit 0
+    ;;
   what-if)
     operation='what-if'
     deployment_name='cloudresume-rg-whatif'
@@ -36,7 +55,7 @@ case "$action" in
     deployment_name='cloudresume-rg-deploy'
     ;;
   *)
-    printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy>' >&2
+    printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|publish>' >&2
     exit 1
     ;;
 esac
