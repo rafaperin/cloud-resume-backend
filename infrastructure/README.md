@@ -26,40 +26,24 @@ Copy .env.example to .env if it does not already exist, then set DEPLOYER_PRINCI
 az ad signed-in-user show --query id --output tsv
 ~~~
 
-Load the ignored environment file before running either deployment command:
-
-~~~sh
-set -a
-source ../../.env
-set +a
-~~~
-
-The Bicep editor does not load .env files automatically. The parameter file uses a non-secret sentinel GUID so editor validation succeeds; load .env before deployment so Azure receives the real object ID for the role assignment.
+The Bicep editor does not load .env files automatically. The parameter file uses a non-secret sentinel GUID so editor validation succeeds. Use deploy.sh for all deployments; it verifies and loads the root .env file before calling Azure CLI.
 
 ## Preview
 
 Run a what-if deployment from this directory before deploying:
 
 ~~~sh
-az deployment sub what-if \
-  --name cloudresume-rg-whatif \
-  --location eastus2 \
-  --template-file main.bicep \
-  --parameters main.bicepparam
+./deploy.sh what-if
 ~~~
 
-Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, and no deletions or SKU changes.
+Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, and no deletions or SKU changes. If .env is not loaded, the role assignment is skipped.
 
 ## Deploy
 
 After reviewing the what-if output, create the resource group:
 
 ~~~sh
-az deployment sub create \
-  --name cloudresume-rg-deploy \
-  --location eastus2 \
-  --template-file main.bicep \
-  --parameters main.bicepparam
+./deploy.sh deploy
 ~~~
 
 The deployment is incremental by default. Do not use complete mode.

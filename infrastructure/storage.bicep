@@ -28,6 +28,8 @@ var storageBlobDataContributorRoleDefinitionId = subscriptionResourceId(
   'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 )
 
+var hasDeployerPrincipalId = deployerPrincipalId != '00000000-0000-0000-0000-000000000000'
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
@@ -51,7 +53,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-resource storageBlobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource storageBlobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (hasDeployerPrincipalId) {
   scope: storageAccount
   name: guid(storageAccount.id, deployerPrincipalId, storageBlobDataContributorRoleDefinitionId)
   properties: {
