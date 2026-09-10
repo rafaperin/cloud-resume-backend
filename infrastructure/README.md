@@ -34,6 +34,8 @@ source ../../.env
 set +a
 ~~~
 
+The Bicep editor does not load .env files automatically. The parameter file uses a non-secret sentinel GUID so editor validation succeeds; load .env before deployment so Azure receives the real object ID for the role assignment.
+
 ## Preview
 
 Run a what-if deployment from this directory before deploying:
