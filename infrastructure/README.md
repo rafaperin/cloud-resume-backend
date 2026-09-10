@@ -56,4 +56,4 @@ After a successful deployment, publish the contents of the repository's frontend
 ./deploy.sh publish
 ~~~
 
-The command reads the storage-account name from the `cloudresume-rg-deploy` Bicep deployment output, then uses Azure CLI data-plane authentication to upload the files. It overwrites blobs in $web with matching names. The deploying identity must have the Storage Blob Data Contributor role assigned by the Bicep deployment; allow a few minutes for a new role assignment to propagate.
+The command reads the storage-account name from the `cloudresume-rg-deploy` Bicep deployment output, then uses Azure CLI data-plane authentication to upload the **contents** of `frontend/`. `frontend/` itself is not created as a path in $web: `frontend/index.html` becomes `$web/index.html`, and `frontend/css/style.css` becomes `$web/css/style.css`. It overwrites blobs in $web with matching names. The deploying identity must have the Storage Blob Data Contributor role assigned by the Bicep deployment; allow a few minutes for a new role assignment to propagate.

@@ -10,6 +10,7 @@ fi
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 project_root="$(cd -- "$script_dir/../.." && pwd)"
 environment_file="$project_root/.env"
+frontend_source_directory="$project_root/frontend"
 action="$1"
 
 if [[ ! -f "$environment_file" ]]; then
@@ -28,6 +29,11 @@ fi
 
 case "$action" in
   publish)
+    if [[ ! -d "$frontend_source_directory" ]]; then
+      printf '%s\n' 'Missing frontend directory.' >&2
+      exit 1
+    fi
+
     storage_account_name="$(az deployment sub show \
       --name cloudresume-rg-deploy \
       --query 'properties.outputs.storageAccountName.value' \
@@ -42,9 +48,8 @@ case "$action" in
       --account-name "$storage_account_name" \
       --auth-mode login \
       --destination '$web' \
-      --source "$project_root/frontend" \
+      --source "$frontend_source_directory" \
       --overwrite true
-    exit 0
     ;;
   what-if)
     operation='what-if'
@@ -59,6 +64,10 @@ case "$action" in
     exit 1
     ;;
 esac
+
+if [[ "$action" == 'publish' ]]; then
+  exit 0
+fi
 
 az deployment sub "$operation" \
   --name "$deployment_name" \
