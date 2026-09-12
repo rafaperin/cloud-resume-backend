@@ -27,6 +27,7 @@ param deployerPrincipalId string
 param customDomainName string = ''
 
 var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
+var cosmosAccountName = 'cosmos-cloudresume-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
@@ -53,6 +54,18 @@ module storageAccount './storage.bicep' = {
   }
 }
 
+module cosmosDb './cosmos-db.bicep' = {
+  name: 'cosmosDbDeployment'
+  scope: resourceGroup
+  params: {
+    cosmosAccountName: cosmosAccountName
+    location: location
+    projectTag: projectTag
+    environmentTag: environmentTag
+    ownerTag: ownerTag
+  }
+}
+
 output resourceGroupId string = resourceGroup.id
 output resourceGroupName string = resourceGroup.name
 output resourceGroupLocation string = resourceGroup.location
@@ -60,3 +73,8 @@ output storageAccountId string = storageAccount.outputs.storageAccountId
 output storageAccountName string = storageAccount.outputs.storageAccountName
 output staticWebsiteUrl string = storageAccount.outputs.staticWebsiteUrl
 output customDomainName string = storageAccount.outputs.customDomainName
+output cosmosAccountId string = cosmosDb.outputs.cosmosAccountId
+output cosmosAccountName string = cosmosDb.outputs.cosmosAccountName
+output cosmosEndpoint string = cosmosDb.outputs.cosmosEndpoint
+output cosmosDatabaseName string = cosmosDb.outputs.cosmosDatabaseName
+output cosmosContainerName string = cosmosDb.outputs.cosmosContainerName

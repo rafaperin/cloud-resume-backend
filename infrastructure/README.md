@@ -4,15 +4,16 @@ The Bicep template in this directory provisions the Cloud Resume Challenge resou
 
 ## Scope
 
-This deployment creates the development resource group and its storage account:
+This deployment creates the development resource group, static-website storage account, and visitor-counter database:
 
 - Name: rg-cloudresume-dev-eus2
 - Region: East US 2
 - Tags: Project, Environment, ManagedBy, and Owner
 - Storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with index.html as the default document
 - Optional custom subdomain registration, configured through CUSTOM_DOMAIN_NAME
+- Cosmos DB for NoSQL: one East US 2 region, lifetime free tier enabled, and a shared-throughput `cloudresume` database at 1,000 RU/s with a `visitor-counter` container
 
-The Standard_LRS storage account is usage-billed. It is the lowest-cost replication option requested for this project; review the Azure estimate before running the deployment.
+The Standard_LRS storage account is usage-billed. Cosmos DB is capped at 1,000 RU/s and uses the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
 
 ## Prerequisites
 
@@ -54,7 +55,7 @@ Run a what-if deployment from this directory before deploying:
 ./deploy.sh what-if
 ~~~
 
-Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, and no deletions or SKU changes. If .env is not loaded, the role assignment is skipped.
+Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, one Cosmos DB for NoSQL account, one shared-throughput database at 1,000 RU/s, one visitor-counter container, and no deletions or SKU changes. If .env is not loaded, the role assignment is skipped.
 
 ## Deploy
 
