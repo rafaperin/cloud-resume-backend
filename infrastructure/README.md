@@ -33,7 +33,7 @@ The Bicep editor does not load .env files automatically. The parameter file uses
 
 Set `CUSTOM_DOMAIN_NAME` in the root `.env` to the custom **subdomain** that Azure should register. Provide only a lowercase host name, such as `www.example.com`; do not include `https://`, a path, or a port. Root domains, such as `example.com`, are not supported by Azure Storage custom-domain mapping.
 
-Before running `./deploy.sh deploy`, create a public DNS CNAME record for `asverify.<CUSTOM_DOMAIN_NAME>` that targets `asverify.<static-website-host>`. Obtain the static-website host from the deployment output:
+Before running `./deploy.sh deploy`, create a public **DNS-only** CNAME record in Cloudflare for `asverify.<CUSTOM_DOMAIN_NAME>` that targets `asverify.<static-website-host>`. Obtain the static-website host from the deployment output:
 
 ~~~sh
 az deployment sub show \
@@ -42,9 +42,9 @@ az deployment sub show \
   --output tsv
 ~~~
 
-After Bicep registers the domain, replace the temporary validation record with a CNAME from `CUSTOM_DOMAIN_NAME` to the static-website host. Azure must be able to resolve these public CNAME records.
+After Bicep registers the domain, replace the temporary validation record with a CNAME from `CUSTOM_DOMAIN_NAME` to the static-website host. You can then proxy that record through Cloudflare to provide visitor-facing HTTPS and redirects. Azure must be able to resolve the temporary validation record publicly.
 
-Azure Storage does not provide HTTPS for a custom domain on its static-website endpoint. This project requires HTTPS, so do not direct public traffic to the registered domain until Azure Front Door or Azure CDN is approved and provisioned to terminate HTTPS. Those services can add costs and require explicit approval under `AZURE_INFRASTRUCTURE_STANDARDS.md`.
+Azure Storage does not provide a certificate for the custom domain. Configure Cloudflare to use an encrypted origin connection; do not use Flexible mode because this storage account requires HTTPS. Full (strict) requires an origin certificate that matches the custom domain, which Azure Storage does not provide.
 
 ## Preview
 
