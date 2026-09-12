@@ -23,6 +23,9 @@ param ownerTag string = 'rafael-ferreira'
 @minLength(1)
 param deployerPrincipalId string
 
+@description('Optional custom subdomain to register for the static website, without a scheme or path.')
+param customDomainName string = ''
+
 var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
@@ -46,6 +49,7 @@ module storageAccount './storage.bicep' = {
     environmentTag: environmentTag
     ownerTag: ownerTag
     deployerPrincipalId: deployerPrincipalId
+    customDomainName: customDomainName
   }
 }
 
@@ -55,3 +59,4 @@ output resourceGroupLocation string = resourceGroup.location
 output storageAccountId string = storageAccount.outputs.storageAccountId
 output storageAccountName string = storageAccount.outputs.storageAccountName
 output staticWebsiteUrl string = storageAccount.outputs.staticWebsiteUrl
+output customDomainName string = storageAccount.outputs.customDomainName

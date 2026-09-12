@@ -10,6 +10,7 @@ This deployment creates the development resource group and its storage account:
 - Region: East US 2
 - Tags: Project, Environment, ManagedBy, and Owner
 - Storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with index.html as the default document
+- Optional custom subdomain registration, configured through CUSTOM_DOMAIN_NAME
 
 The Standard_LRS storage account is usage-billed. It is the lowest-cost replication option requested for this project; review the Azure estimate before running the deployment.
 
@@ -27,6 +28,23 @@ az ad signed-in-user show --query id --output tsv
 ~~~
 
 The Bicep editor does not load .env files automatically. The parameter file uses a non-secret sentinel GUID so editor validation succeeds. Use deploy.sh for all deployments; it verifies and loads the root .env file before calling Azure CLI.
+
+## Configure a custom domain
+
+Set `CUSTOM_DOMAIN_NAME` in the root `.env` to the custom **subdomain** that Azure should register. Provide only a lowercase host name, such as `www.example.com`; do not include `https://`, a path, or a port. Root domains, such as `example.com`, are not supported by Azure Storage custom-domain mapping.
+
+Before running `./deploy.sh deploy`, create a public DNS CNAME record for `asverify.<CUSTOM_DOMAIN_NAME>` that targets `asverify.<static-website-host>`. Obtain the static-website host from the deployment output:
+
+~~~sh
+az deployment sub show \
+  --name cloudresume-rg-deploy \
+  --query 'properties.outputs.staticWebsiteUrl.value' \
+  --output tsv
+~~~
+
+After Bicep registers the domain, replace the temporary validation record with a CNAME from `CUSTOM_DOMAIN_NAME` to the static-website host. Azure must be able to resolve these public CNAME records.
+
+Azure Storage does not provide HTTPS for a custom domain on its static-website endpoint. This project requires HTTPS, so do not direct public traffic to the registered domain until Azure Front Door or Azure CDN is approved and provisioned to terminate HTTPS. Those services can add costs and require explicit approval under `AZURE_INFRASTRUCTURE_STANDARDS.md`.
 
 ## Preview
 

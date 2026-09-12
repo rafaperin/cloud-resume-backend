@@ -27,6 +27,13 @@ if [[ -z "$DEPLOYER_PRINCIPAL_ID" ]]; then
   exit 1
 fi
 
+custom_domain_name="${CUSTOM_DOMAIN_NAME:-}"
+
+if [[ -n "$custom_domain_name" ]] && [[ ! "$custom_domain_name" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ ]]; then
+  printf '%s\n' 'CUSTOM_DOMAIN_NAME must be a lowercase subdomain without a scheme, path, or port.' >&2
+  exit 1
+fi
+
 case "$action" in
   publish)
     if [[ ! -d "$frontend_source_directory" ]]; then
