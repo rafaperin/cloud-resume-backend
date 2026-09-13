@@ -67,6 +67,7 @@ module cosmosDb './cosmos-db.bicep' = {
     projectTag: projectTag
     environmentTag: environmentTag
     ownerTag: ownerTag
+    deployerPrincipalId: deployerPrincipalId
   }
 }
 

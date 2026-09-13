@@ -20,9 +20,14 @@ param environmentTag string
 @description('Value for the Owner resource tag.')
 param ownerTag string
 
+@description('Microsoft Entra object ID of the user who initializes the visitor counter.')
+param deployerPrincipalId string
+
 var databaseName = 'cloudresume'
 var containerName = 'visitor-counter'
 var sharedThroughput = 1000
+var cosmosDataContributorRoleDefinitionId = '${cosmosAccount.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+var hasDeployerPrincipalId = deployerPrincipalId != '00000000-0000-0000-0000-000000000000'
 
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosAccountName
@@ -85,6 +90,16 @@ resource visitorCounterContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatab
         version: 2
       }
     }
+  }
+}
+
+resource deployerCosmosDataContributor 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = if (hasDeployerPrincipalId) {
+  parent: cosmosAccount
+  name: guid(cosmosAccount.id, deployerPrincipalId, cosmosDataContributorRoleDefinitionId)
+  properties: {
+    principalId: deployerPrincipalId
+    roleDefinitionId: cosmosDataContributorRoleDefinitionId
+    scope: '/'
   }
 }
 

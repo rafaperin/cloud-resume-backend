@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if [[ "$#" -ne 1 ]]; then
-  printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|publish>' >&2
+  printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|publish|seed-counter>' >&2
   exit 1
 fi
 
@@ -69,6 +69,30 @@ case "$action" in
       --source "$frontend_source_directory" \
       --overwrite true
     ;;
+  seed-counter)
+    cosmos_endpoint="$(az deployment sub show \
+      --name cloudresume-rg-deploy \
+      --query 'properties.outputs.cosmosEndpoint.value' \
+      --output tsv)"
+    cosmos_database_name="$(az deployment sub show \
+      --name cloudresume-rg-deploy \
+      --query 'properties.outputs.cosmosDatabaseName.value' \
+      --output tsv)"
+    cosmos_container_name="$(az deployment sub show \
+      --name cloudresume-rg-deploy \
+      --query 'properties.outputs.cosmosContainerName.value' \
+      --output tsv)"
+
+    if [[ -z "$cosmos_endpoint" || -z "$cosmos_database_name" || -z "$cosmos_container_name" ]]; then
+      printf '%s\n' 'Unable to determine Cosmos DB resources. Run ./deploy.sh deploy first.' >&2
+      exit 1
+    fi
+
+    COSMOS_ENDPOINT="$cosmos_endpoint" \
+      COSMOS_DATABASE_NAME="$cosmos_database_name" \
+      COSMOS_CONTAINER_NAME="$cosmos_container_name" \
+      python3 "$project_root/backend/tools/seed_visitor_counter.py"
+    ;;
   what-if)
     operation='what-if'
     deployment_name='cloudresume-rg-whatif'
@@ -78,12 +102,12 @@ case "$action" in
     deployment_name='cloudresume-rg-deploy'
     ;;
   *)
-    printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|publish>' >&2
+    printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|publish|seed-counter>' >&2
     exit 1
     ;;
 esac
 
-if [[ "$action" == 'publish' ]]; then
+if [[ "$action" == 'publish' || "$action" == 'seed-counter' ]]; then
   exit 0
 fi
 

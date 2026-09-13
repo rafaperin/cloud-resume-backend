@@ -12,6 +12,7 @@ This deployment creates the development resource group, static-website storage a
 - Storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with index.html as the default document
 - Optional Azure Storage custom-domain registration, configured through CUSTOM_DOMAIN_NAME and REGISTER_STORAGE_CUSTOM_DOMAIN
 - Cosmos DB for NoSQL: one East US 2 region, lifetime free tier enabled, and a shared-throughput `cloudresume` database at 1,000 RU/s with a `visitor-counter` container
+- Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `{ "id": "resume", "count": 0 }`
 
 The Standard_LRS storage account is usage-billed. Cosmos DB is capped at 1,000 RU/s and uses the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
 
@@ -59,7 +60,7 @@ Run a what-if deployment from this directory before deploying:
 ./deploy.sh what-if
 ~~~
 
-Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, one Cosmos DB for NoSQL account, one shared-throughput database at 1,000 RU/s, one visitor-counter container, and no deletions or SKU changes. If .env is not loaded, the role assignment is skipped.
+Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, one Cosmos DB for NoSQL account, one shared-throughput database at 1,000 RU/s, one visitor-counter container, one Cosmos DB Built-in Data Contributor assignment, and no deletions or SKU changes. If .env is not loaded, the role assignments are skipped.
 
 ## Deploy
 
@@ -70,6 +71,17 @@ After reviewing the what-if output, create the resource group:
 ~~~
 
 The deployment is incremental by default. Do not use complete mode.
+
+## Seed the visitor counter
+
+Install the pinned backend dependencies in your active virtual environment, then run the seed command after a successful deployment:
+
+~~~sh
+python3 -m pip install -r ../requirements.txt
+./deploy.sh seed-counter
+~~~
+
+The command uses the signed-in Azure CLI identity and the Cosmos DB Built-in Data Contributor role from Bicep. It creates the document `{ "id": "resume", "count": 0 }` in the `/id` partition only when it does not exist. Re-running the command preserves the current count. A new Cosmos DB data-plane role assignment can take a few minutes to propagate.
 
 ## Publish the frontend
 
