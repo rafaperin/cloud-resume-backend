@@ -4,15 +4,15 @@ The Bicep template in this directory provisions the Cloud Resume Challenge resou
 
 ## Scope
 
-This deployment creates the development resource group, static-website storage account, and visitor-counter database:
+This deployment creates the development resource group, static-website storage account, and visitor-counter table:
 
 - Name: rg-cloudresume-dev-eus2
 - Region: East US 2
 - Tags: Project, Environment, ManagedBy, and Owner
 - Storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with index.html as the default document
 - Optional Azure Storage custom-domain registration, configured through CUSTOM_DOMAIN_NAME and REGISTER_STORAGE_CUSTOM_DOMAIN
-- Cosmos DB for NoSQL: one East US 2 region, lifetime free tier enabled, and a shared-throughput `cloudresume` database at 1,000 RU/s with a `visitor-counter` container
-- Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `{ "id": "resume", "count": 0 }`
+- Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 1,000 RU/s
+- Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `count=0`
 
 The Standard_LRS storage account is usage-billed. Cosmos DB is capped at 1,000 RU/s and uses the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
 
@@ -60,7 +60,7 @@ Run a what-if deployment from this directory before deploying:
 ./deploy.sh what-if
 ~~~
 
-Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, one Cosmos DB for NoSQL account, one shared-throughput database at 1,000 RU/s, one visitor-counter container, one Cosmos DB Built-in Data Contributor assignment, and no deletions or SKU changes. If .env is not loaded, the role assignments are skipped.
+Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, one Cosmos DB Table API account, one `visitorcounter` table at 1,000 RU/s, one Cosmos DB Built-in Data Contributor assignment, and no deletions or SKU changes. If .env is not loaded, the role assignments are skipped.
 
 ## Deploy
 
@@ -81,7 +81,9 @@ python3 -m pip install -r ../requirements.txt
 ./deploy.sh seed-counter
 ~~~
 
-The command uses the signed-in Azure CLI identity and the Cosmos DB Built-in Data Contributor role from Bicep. It creates the document `{ "id": "resume", "count": 0 }` in the `/id` partition only when it does not exist. Re-running the command preserves the current count. A new Cosmos DB data-plane role assignment can take a few minutes to propagate.
+The command uses the signed-in Azure CLI identity and the Cosmos DB Built-in Data Contributor role from Bicep. It creates the entity with `PartitionKey=resume`, `RowKey=counter`, and `count=0` only when it does not exist. Re-running the command preserves the current count. A new Cosmos DB data-plane role assignment can take a few minutes to propagate.
+
+Azure Cosmos DB account APIs cannot be changed after creation. If a NoSQL API account from an earlier deployment exists, do not delete it automatically. Obtain explicit approval before deleting that account and recreating it with the Table API.
 
 ## Publish the frontend
 

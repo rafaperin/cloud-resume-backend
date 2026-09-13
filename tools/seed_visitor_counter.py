@@ -1,14 +1,16 @@
-"""Create the initial visitor-counter document when it does not already exist."""
+"""Create the initial visitor-counter entity when it does not already exist."""
 
 import logging
 import os
 
-from azure.cosmos import CosmosClient, exceptions
+from azure.core.exceptions import ResourceExistsError
+from azure.data.tables import TableClient
 from azure.identity import DefaultAzureCredential
 
 
-COUNTER_DOCUMENT = {
-    'id': 'resume',
+COUNTER_ENTITY = {
+    'PartitionKey': 'resume',
+    'RowKey': 'counter',
     'count': 0,
 }
 
@@ -23,20 +25,21 @@ def read_required_setting(name: str) -> str:
 
 
 def seed_counter() -> bool:
-    """Create the counter document and return whether this invocation created it."""
-    endpoint = read_required_setting('COSMOS_ENDPOINT')
-    database_name = read_required_setting('COSMOS_DATABASE_NAME')
-    container_name = read_required_setting('COSMOS_CONTAINER_NAME')
+    """Create the counter entity and return whether this invocation created it."""
+    endpoint = read_required_setting('COSMOS_TABLE_ENDPOINT')
+    table_name = read_required_setting('COSMOS_TABLE_NAME')
 
     credential = DefaultAzureCredential()
-    client = CosmosClient(endpoint, credential=credential)
-    container = client.get_database_client(database_name).get_container_client(container_name)
+    client = TableClient(
+        endpoint=endpoint,
+        table_name=table_name,
+        credential=credential,
+        audience='https://cosmos.azure.com',
+    )
 
     try:
-        container.create_item(body=COUNTER_DOCUMENT)
-    except exceptions.CosmosHttpResponseError as error:
-        if error.status_code != 409:
-            raise
+        client.create_entity(entity=COUNTER_ENTITY)
+    except ResourceExistsError:
         return False
     finally:
         client.close()
@@ -49,10 +52,10 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format='%(message)s')
 
     if seed_counter():
-        logging.info('Created visitor counter document with count 0.')
+        logging.info('Created visitor counter entity with count 0.')
         return
 
-    logging.info('Visitor counter document already exists; existing count was preserved.')
+    logging.info('Visitor counter entity already exists; existing count was preserved.')
 
 
 if __name__ == '__main__':

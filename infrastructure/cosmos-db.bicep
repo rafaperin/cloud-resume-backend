@@ -23,10 +23,9 @@ param ownerTag string
 @description('Microsoft Entra object ID of the user who initializes the visitor counter.')
 param deployerPrincipalId string
 
-var databaseName = 'cloudresume'
-var containerName = 'visitor-counter'
+var tableName = 'visitorcounter'
 var sharedThroughput = 1000
-var cosmosDataContributorRoleDefinitionId = '${cosmosAccount.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+var cosmosDataContributorRoleDefinitionId = '${cosmosAccount.id}/tableRoleDefinitions/00000000-0000-0000-0000-000000000002'
 var hasDeployerPrincipalId = deployerPrincipalId != '00000000-0000-0000-0000-000000000000'
 
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
@@ -40,7 +39,11 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
     Owner: ownerTag
   }
   properties: {
-    capabilities: []
+    capabilities: [
+      {
+        name: 'EnableTable'
+      }
+    ]
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'
     }
@@ -63,37 +66,20 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   }
 }
 
-resource visitorCounterDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
+resource visitorCounterTable 'Microsoft.DocumentDB/databaseAccounts/tables@2024-05-15' = {
   parent: cosmosAccount
-  name: databaseName
+  name: tableName
   properties: {
     options: {
       throughput: sharedThroughput
     }
     resource: {
-      id: databaseName
+      id: tableName
     }
   }
 }
 
-resource visitorCounterContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
-  parent: visitorCounterDatabase
-  name: containerName
-  properties: {
-    resource: {
-      id: containerName
-      partitionKey: {
-        kind: 'Hash'
-        paths: [
-          '/id'
-        ]
-        version: 2
-      }
-    }
-  }
-}
-
-resource deployerCosmosDataContributor 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = if (hasDeployerPrincipalId) {
+resource deployerCosmosDataContributor 'Microsoft.DocumentDB/databaseAccounts/tableRoleAssignments@2025-05-01-preview' = if (hasDeployerPrincipalId) {
   parent: cosmosAccount
   name: guid(cosmosAccount.id, deployerPrincipalId, cosmosDataContributorRoleDefinitionId)
   properties: {
@@ -105,6 +91,5 @@ resource deployerCosmosDataContributor 'Microsoft.DocumentDB/databaseAccounts/sq
 
 output cosmosAccountId string = cosmosAccount.id
 output cosmosAccountName string = cosmosAccount.name
-output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
-output cosmosDatabaseName string = visitorCounterDatabase.name
-output cosmosContainerName string = visitorCounterContainer.name
+output cosmosTableEndpoint string = 'https://${cosmosAccount.name}.table.cosmos.azure.com:443/'
+output cosmosTableName string = visitorCounterTable.name

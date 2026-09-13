@@ -70,27 +70,22 @@ case "$action" in
       --overwrite true
     ;;
   seed-counter)
-    cosmos_endpoint="$(az deployment sub show \
+    cosmos_table_endpoint="$(az deployment sub show \
       --name cloudresume-rg-deploy \
-      --query 'properties.outputs.cosmosEndpoint.value' \
+      --query 'properties.outputs.cosmosTableEndpoint.value' \
       --output tsv)"
-    cosmos_database_name="$(az deployment sub show \
+    cosmos_table_name="$(az deployment sub show \
       --name cloudresume-rg-deploy \
-      --query 'properties.outputs.cosmosDatabaseName.value' \
-      --output tsv)"
-    cosmos_container_name="$(az deployment sub show \
-      --name cloudresume-rg-deploy \
-      --query 'properties.outputs.cosmosContainerName.value' \
+      --query 'properties.outputs.cosmosTableName.value' \
       --output tsv)"
 
-    if [[ -z "$cosmos_endpoint" || -z "$cosmos_database_name" || -z "$cosmos_container_name" ]]; then
-      printf '%s\n' 'Unable to determine Cosmos DB resources. Run ./deploy.sh deploy first.' >&2
+    if [[ -z "$cosmos_table_endpoint" || -z "$cosmos_table_name" ]]; then
+      printf '%s\n' 'Unable to determine Cosmos DB Table API resources. Run ./deploy.sh deploy first.' >&2
       exit 1
     fi
 
-    COSMOS_ENDPOINT="$cosmos_endpoint" \
-      COSMOS_DATABASE_NAME="$cosmos_database_name" \
-      COSMOS_CONTAINER_NAME="$cosmos_container_name" \
+    COSMOS_TABLE_ENDPOINT="$cosmos_table_endpoint" \
+      COSMOS_TABLE_NAME="$cosmos_table_name" \
       python3 "$project_root/backend/tools/seed_visitor_counter.py"
     ;;
   what-if)
