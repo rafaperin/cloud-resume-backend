@@ -10,7 +10,7 @@ This deployment creates the development resource group, static-website storage a
 - Region: East US 2
 - Tags: Project, Environment, ManagedBy, and Owner
 - Storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with index.html as the default document
-- Optional custom subdomain registration, configured through CUSTOM_DOMAIN_NAME
+- Optional Azure Storage custom-domain registration, configured through CUSTOM_DOMAIN_NAME and REGISTER_STORAGE_CUSTOM_DOMAIN
 - Cosmos DB for NoSQL: one East US 2 region, lifetime free tier enabled, and a shared-throughput `cloudresume` database at 1,000 RU/s with a `visitor-counter` container
 
 The Standard_LRS storage account is usage-billed. Cosmos DB is capped at 1,000 RU/s and uses the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
@@ -32,9 +32,13 @@ The Bicep editor does not load .env files automatically. The parameter file uses
 
 ## Configure a custom domain
 
-Set `CUSTOM_DOMAIN_NAME` in the root `.env` to the custom **subdomain** that Azure should register. Provide only a lowercase host name, such as `www.example.com`; do not include `https://`, a path, or a port. Root domains, such as `example.com`, are not supported by Azure Storage custom-domain mapping.
+Set `CUSTOM_DOMAIN_NAME` in the root `.env` to the custom **subdomain**, without `https://`, a path, or a port. The deployment defaults `REGISTER_STORAGE_CUSTOM_DOMAIN` to `false`, so Cloudflare-managed domains bypass Azure Storage's CNAME verification and do not block unrelated infrastructure updates.
 
-Before running `./deploy.sh deploy`, create a public **DNS-only** CNAME record in Cloudflare for `asverify.<CUSTOM_DOMAIN_NAME>` that targets `asverify.<static-website-host>`. Obtain the static-website host from the deployment output:
+If Azure Storage registration has already succeeded, leave `REGISTER_STORAGE_CUSTOM_DOMAIN=false` on future deployments to avoid re-running validation. The deployment will not request a new Storage custom-domain registration.
+
+Set `REGISTER_STORAGE_CUSTOM_DOMAIN=true` only when a direct Azure Storage custom-domain registration is required. The domain must be a lowercase subdomain, such as `www.example.com`; root domains, such as `example.com`, are not supported by Azure Storage custom-domain mapping.
+
+Before running `./deploy.sh deploy` with registration enabled, create a public **DNS-only** CNAME record in Cloudflare for `asverify.<CUSTOM_DOMAIN_NAME>` that targets `asverify.<static-website-host>`. Obtain the static-website host from the deployment output:
 
 ~~~sh
 az deployment sub show \

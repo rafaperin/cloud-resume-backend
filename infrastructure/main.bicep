@@ -26,6 +26,9 @@ param deployerPrincipalId string
 @description('Optional custom subdomain to register for the static website, without a scheme or path.')
 param customDomainName string = ''
 
+@description('Whether to register the custom domain with Azure Storage. Keep false for Cloudflare-managed domains or after registration succeeds.')
+param customDomainRegistrationEnabled bool = false
+
 var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var cosmosAccountName = 'cosmos-cloudresume-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 
@@ -51,6 +54,7 @@ module storageAccount './storage.bicep' = {
     ownerTag: ownerTag
     deployerPrincipalId: deployerPrincipalId
     customDomainName: customDomainName
+    customDomainRegistrationEnabled: customDomainRegistrationEnabled
   }
 }
 
@@ -73,6 +77,7 @@ output storageAccountId string = storageAccount.outputs.storageAccountId
 output storageAccountName string = storageAccount.outputs.storageAccountName
 output staticWebsiteUrl string = storageAccount.outputs.staticWebsiteUrl
 output customDomainName string = storageAccount.outputs.customDomainName
+output customDomainRegistrationEnabled bool = storageAccount.outputs.customDomainRegistrationEnabled
 output cosmosAccountId string = cosmosDb.outputs.cosmosAccountId
 output cosmosAccountName string = cosmosDb.outputs.cosmosAccountName
 output cosmosEndpoint string = cosmosDb.outputs.cosmosEndpoint
