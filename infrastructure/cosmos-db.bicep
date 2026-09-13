@@ -85,7 +85,7 @@ resource deployerCosmosDataContributor 'Microsoft.DocumentDB/databaseAccounts/ta
   properties: {
     principalId: deployerPrincipalId
     roleDefinitionId: cosmosDataContributorRoleDefinitionId
-    scope: '/'
+    scope: cosmosAccount.id
   }
 }
 
