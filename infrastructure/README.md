@@ -12,7 +12,7 @@ This deployment creates the development resource group, static-website storage a
 - Storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with index.html as the default document
 - Optional Azure Storage custom-domain registration, configured through CUSTOM_DOMAIN_NAME and REGISTER_STORAGE_CUSTOM_DOMAIN
 - Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 400 RU/s
-- Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `count=0`
+- Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `Count=0`
 
 The Standard_LRS storage account is usage-billed. Cosmos DB is capped at 400 RU/s, the minimum manual provisioned throughput for this Table API workload. This remains within the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
 
@@ -81,7 +81,7 @@ python3 -m pip install -r ../requirements.txt
 ./deploy.sh seed-counter
 ~~~
 
-The command uses the signed-in Azure CLI identity and the Cosmos DB Built-in Data Contributor role from Bicep. It creates the entity with `PartitionKey=resume`, `RowKey=counter`, and `count=0` only when it does not exist. Re-running the command preserves the current count. A new Cosmos DB data-plane role assignment can take a few minutes to propagate.
+The command uses the signed-in Azure CLI identity and the Cosmos DB Built-in Data Contributor role from Bicep. It creates the entity with `PartitionKey=resume`, `RowKey=counter`, and `Count=0` only when it does not exist. Re-running the command preserves the current count. A new Cosmos DB data-plane role assignment can take a few minutes to propagate.
 
 Azure Cosmos DB account APIs cannot be changed after creation. If a NoSQL API account from an earlier deployment exists, do not delete it automatically. Obtain explicit approval before deleting that account and recreating it with the Table API.
 

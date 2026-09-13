@@ -11,7 +11,7 @@ from azure.identity import DefaultAzureCredential
 COUNTER_ENTITY = {
     'PartitionKey': 'resume',
     'RowKey': 'counter',
-    'count': 0,
+    'Count': 0,
 }
 
 
@@ -52,7 +52,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format='%(message)s')
 
     if seed_counter():
-        logging.info('Created visitor counter entity with count 0.')
+        logging.info('Created visitor counter entity with Count 0.')
         return
 
     logging.info('Visitor counter entity already exists; existing count was preserved.')
