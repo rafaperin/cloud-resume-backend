@@ -129,14 +129,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           name: 'COSMOS_TABLE_NAME'
           value: cosmosTableName
         }
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'python'
-        }
       ]
     }
   }
