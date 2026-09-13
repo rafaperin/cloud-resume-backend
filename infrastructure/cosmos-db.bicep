@@ -23,10 +23,17 @@ param ownerTag string
 @description('Microsoft Entra object ID of the user who initializes the visitor counter.')
 param deployerPrincipalId string
 
+@description('System-assigned managed identity principal ID of the visitor-counter Function App.')
+param functionAppPrincipalId string
+
+@description('Resource ID of the visitor-counter Function App, used for a deterministic role-assignment name.')
+param functionAppResourceId string
+
 var tableName = 'visitorcounter'
 var provisionedThroughput = 400
 var cosmosDataContributorRoleDefinitionId = '${cosmosAccount.id}/tableRoleDefinitions/00000000-0000-0000-0000-000000000002'
 var hasDeployerPrincipalId = deployerPrincipalId != '00000000-0000-0000-0000-000000000000'
+var hasFunctionAppPrincipalId = !empty(functionAppPrincipalId)
 
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosAccountName
@@ -84,6 +91,16 @@ resource deployerCosmosDataContributor 'Microsoft.DocumentDB/databaseAccounts/ta
   name: guid(cosmosAccount.id, deployerPrincipalId, cosmosDataContributorRoleDefinitionId)
   properties: {
     principalId: deployerPrincipalId
+    roleDefinitionId: cosmosDataContributorRoleDefinitionId
+    scope: cosmosAccount.id
+  }
+}
+
+resource functionCosmosDataContributor 'Microsoft.DocumentDB/databaseAccounts/tableRoleAssignments@2025-05-01-preview' = if (hasFunctionAppPrincipalId) {
+  parent: cosmosAccount
+  name: guid(cosmosAccount.id, functionAppResourceId, cosmosDataContributorRoleDefinitionId)
+  properties: {
+    principalId: functionAppPrincipalId
     roleDefinitionId: cosmosDataContributorRoleDefinitionId
     scope: cosmosAccount.id
   }

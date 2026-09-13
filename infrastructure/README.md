@@ -4,7 +4,7 @@ The Bicep template in this directory provisions the Cloud Resume Challenge resou
 
 ## Scope
 
-This deployment creates the development resource group, static-website storage account, and visitor-counter table:
+This deployment creates the development resource group, static-website storage account, visitor-counter table, and the serverless API infrastructure:
 
 - Name: rg-cloudresume-dev-eus2
 - Region: East US 2
@@ -13,8 +13,14 @@ This deployment creates the development resource group, static-website storage a
 - Optional Azure Storage custom-domain registration, configured through CUSTOM_DOMAIN_NAME and REGISTER_STORAGE_CUSTOM_DOMAIN
 - Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 400 RU/s
 - Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `Count=0`
+- Azure Functions: a Linux Flex Consumption (`FC1`) plan and a Python 3.11 Function App with a system-assigned managed identity
+- Function deployment storage: a private `function-releases` blob container in the existing storage account, accessed with the Function App's managed identity
+- Function data access: a Cosmos DB Built-in Data Contributor assignment for the Function App identity, scoped to the Table API account
+- Function API configuration: the Table API endpoint and `visitorcounter` table name are supplied as application settings; CORS allows the configured custom-domain origin
 
 The Standard_LRS storage account is usage-billed. Cosmos DB is capped at 400 RU/s, the minimum manual provisioned throughput for this Table API workload. This remains within the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
+
+The Function App uses 512 MB on-demand instances, has no always-ready instances, and is capped at 10 instances. Flex Consumption provides a monthly on-demand free grant of 250,000 executions and 100,000 GB-seconds per subscription, but it is a usage-billed service after that allowance. This configuration limits scale but does not impose a spending cap; review the Azure estimate before deployment.
 
 ## Prerequisites
 
@@ -60,7 +66,7 @@ Run a what-if deployment from this directory before deploying:
 ./deploy.sh what-if
 ~~~
 
-Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, one Cosmos DB Table API account, one `visitorcounter` table at 400 RU/s, one Cosmos DB Built-in Data Contributor assignment, and no deletions or SKU changes. If .env is not loaded, the role assignments are skipped.
+Review the result. It should show one resource-group creation, one Standard_LRS storage-account update, the private `function-releases` container, one Flex Consumption plan, one Function App with its system-assigned identity, Function App storage and Cosmos data-plane role assignments, one Cosmos DB Table API account, one `visitorcounter` table at 400 RU/s, and no deletions or SKU changes. If .env is not loaded, the deploying-user role assignments are skipped.
 
 ## Deploy
 
@@ -71,6 +77,19 @@ After reviewing the what-if output, create the resource group:
 ~~~
 
 The deployment is incremental by default. Do not use complete mode.
+
+## Function API infrastructure
+
+The Bicep deployment configures the public Function App that will expose `GET /api/visitor` and `POST /api/visitor` once the Python function code is added and published. Its URL is available after deployment:
+
+~~~sh
+az deployment sub show \
+  --name cloudresume-rg-deploy \
+  --query 'properties.outputs.functionAppUrl.value' \
+  --output tsv
+~~~
+
+Flex Consumption requires a OneDeploy package in the private `function-releases` container. Provisioning infrastructure does not publish function source code. Publish the Python Function App in a later step after its implementation and deployment workflow are in place.
 
 ## Seed the visitor counter
 

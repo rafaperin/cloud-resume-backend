@@ -31,6 +31,9 @@ param customDomainRegistrationEnabled bool = false
 
 var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var cosmosAccountName = 'cosmos-cloudresume-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
+var functionAppName = 'func-cr-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
+var functionPlanName = 'plan-cr-dev-eus2'
+var functionAppResourceId = resourceId(resourceGroupName, 'Microsoft.Web/sites', functionAppName)
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
@@ -58,6 +61,25 @@ module storageAccount './storage.bicep' = {
   }
 }
 
+module functionApp './function-app.bicep' = {
+  name: 'functionAppDeployment'
+  scope: resourceGroup
+  params: {
+    functionAppName: functionAppName
+    functionPlanName: functionPlanName
+    location: location
+    projectTag: projectTag
+    environmentTag: environmentTag
+    ownerTag: ownerTag
+    storageAccountName: storageAccount.outputs.storageAccountName
+    storageBlobEndpoint: storageAccount.outputs.blobEndpoint
+    deploymentContainerName: storageAccount.outputs.functionDeploymentContainerName
+    cosmosTableEndpoint: 'https://${cosmosAccountName}.table.cosmos.azure.com:443/'
+    cosmosTableName: 'visitorcounter'
+    frontendOrigin: empty(customDomainName) ? '' : 'https://${customDomainName}'
+  }
+}
+
 module cosmosDb './cosmos-db.bicep' = {
   name: 'cosmosDbDeployment'
   scope: resourceGroup
@@ -68,6 +90,8 @@ module cosmosDb './cosmos-db.bicep' = {
     environmentTag: environmentTag
     ownerTag: ownerTag
     deployerPrincipalId: deployerPrincipalId
+    functionAppPrincipalId: functionApp.outputs.functionAppPrincipalId
+    functionAppResourceId: functionAppResourceId
   }
 }
 
@@ -77,6 +101,8 @@ output resourceGroupLocation string = resourceGroup.location
 output storageAccountId string = storageAccount.outputs.storageAccountId
 output storageAccountName string = storageAccount.outputs.storageAccountName
 output staticWebsiteUrl string = storageAccount.outputs.staticWebsiteUrl
+output functionAppName string = functionApp.outputs.functionAppName
+output functionAppUrl string = functionApp.outputs.functionAppUrl
 output customDomainName string = storageAccount.outputs.customDomainName
 output customDomainRegistrationEnabled bool = storageAccount.outputs.customDomainRegistrationEnabled
 output cosmosAccountId string = cosmosDb.outputs.cosmosAccountId
