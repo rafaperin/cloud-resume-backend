@@ -24,7 +24,7 @@ param ownerTag string
 param deployerPrincipalId string
 
 var tableName = 'visitorcounter'
-var sharedThroughput = 1000
+var provisionedThroughput = 400
 var cosmosDataContributorRoleDefinitionId = '${cosmosAccount.id}/tableRoleDefinitions/00000000-0000-0000-0000-000000000002'
 var hasDeployerPrincipalId = deployerPrincipalId != '00000000-0000-0000-0000-000000000000'
 
@@ -61,7 +61,7 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
     ]
     publicNetworkAccess: 'Enabled'
     capacity: {
-      totalThroughputLimit: sharedThroughput
+      totalThroughputLimit: provisionedThroughput
     }
   }
 }
@@ -71,7 +71,7 @@ resource visitorCounterTable 'Microsoft.DocumentDB/databaseAccounts/tables@2024-
   name: tableName
   properties: {
     options: {
-      throughput: sharedThroughput
+      throughput: provisionedThroughput
     }
     resource: {
       id: tableName

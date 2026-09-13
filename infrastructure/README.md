@@ -11,10 +11,10 @@ This deployment creates the development resource group, static-website storage a
 - Tags: Project, Environment, ManagedBy, and Owner
 - Storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with index.html as the default document
 - Optional Azure Storage custom-domain registration, configured through CUSTOM_DOMAIN_NAME and REGISTER_STORAGE_CUSTOM_DOMAIN
-- Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 1,000 RU/s
+- Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 400 RU/s
 - Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `count=0`
 
-The Standard_LRS storage account is usage-billed. Cosmos DB is capped at 1,000 RU/s and uses the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
+The Standard_LRS storage account is usage-billed. Cosmos DB is capped at 400 RU/s, the minimum manual provisioned throughput for this Table API workload. This remains within the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
 
 ## Prerequisites
 
@@ -60,7 +60,7 @@ Run a what-if deployment from this directory before deploying:
 ./deploy.sh what-if
 ~~~
 
-Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, one Cosmos DB Table API account, one `visitorcounter` table at 1,000 RU/s, one Cosmos DB Built-in Data Contributor assignment, and no deletions or SKU changes. If .env is not loaded, the role assignments are skipped.
+Review the result. It should show one resource-group creation, one Standard_LRS storage-account creation, one Storage Blob Data Contributor assignment scoped to that account, one Cosmos DB Table API account, one `visitorcounter` table at 400 RU/s, one Cosmos DB Built-in Data Contributor assignment, and no deletions or SKU changes. If .env is not loaded, the role assignments are skipped.
 
 ## Deploy
 
