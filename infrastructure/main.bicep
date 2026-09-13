@@ -33,7 +33,7 @@ var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, reso
 var cosmosAccountName = 'cosmos-cloudresume-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var functionAppName = 'func-cr-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var functionPlanName = 'plan-cr-dev-eus2'
-var functionAppResourceId = resourceId(resourceGroupName, 'Microsoft.Web/sites', functionAppName)
+var functionAppResourceId = '${subscription().id}/resourceGroups/${resourceGroupName}/providers/Microsoft.Web/sites/${functionAppName}'
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
