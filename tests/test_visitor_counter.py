@@ -8,8 +8,9 @@ import unittest
 from unittest.mock import patch
 
 import azure.functions as func
-from azure.core.exceptions import ResourceModifiedError, ResourceNotFoundError
-from azure.data.tables import TableEntity
+from azure.core import MatchConditions
+from azure.core.exceptions import ResourceExistsError, ResourceModifiedError, ResourceNotFoundError
+from azure.data.tables import UpdateMode
 
 
 BACKEND_DIRECTORY = Path(__file__).resolve().parents[1]
@@ -54,32 +55,49 @@ class FailingVisitorCounterRepository(FakeVisitorCounterRepository):
         raise VisitorCounterStorageError('Storage is unavailable.')
 
 
-class FakeTableClient:
-    """Minimal TableClient fake that records optimistic-concurrency updates."""
+class FakeTableEntity(dict[str, object]):
+    """Mapping-shaped Table API entity with server metadata for adapter tests."""
 
-    def __init__(self, count: int = 0) -> None:
-        self.entity = TableEntity(
+    def __init__(self, count: int, etag: str) -> None:
+        super().__init__(
             {
                 'PartitionKey': 'resume',
                 'RowKey': 'counter',
                 'Count': count,
             }
         )
-        self.entity.metadata['etag'] = 'etag-1'
+        self.metadata = {'etag': etag}
+
+
+class FakeTableClient:
+    """Minimal TableClient fake that records optimistic-concurrency updates."""
+
+    def __init__(self, count: int = 0) -> None:
+        self.entity = make_table_entity(count=count, etag='etag-1')
+        self.entity_reads: list[FakeTableEntity] = []
         self.update_arguments: dict[str, object] | None = None
+        self.update_calls: list[dict[str, object]] = []
         self.created_entity: dict[str, object] | None = None
         self.create_table_called = False
         self.update_errors: list[Exception] = []
+        self.create_entity_error: Exception | None = None
         self.closed = False
 
-    def get_entity(self, partition_key: str, row_key: str) -> TableEntity:
-        """Return the seeded entity."""
+    def get_entity(self, partition_key: str, row_key: str) -> FakeTableEntity:
+        """Return the next configured entity read."""
         self.last_partition_key = partition_key
         self.last_row_key = row_key
+        if self.entity_reads:
+            return self.entity_reads.pop(0)
         return self.entity
 
     def update_entity(self, **kwargs: object) -> None:
         """Record the update request and persist the merged count for the fake."""
+        recorded_arguments = dict(kwargs)
+        requested_entity = kwargs['entity']
+        if isinstance(requested_entity, dict):
+            recorded_arguments['entity'] = requested_entity.copy()
+        self.update_calls.append(recorded_arguments)
         if self.update_errors:
             raise self.update_errors.pop(0)
         self.update_arguments = kwargs
@@ -94,11 +112,18 @@ class FakeTableClient:
 
     def create_entity(self, entity: dict[str, object]) -> None:
         """Record initialization of the local counter entity."""
+        if self.create_entity_error is not None:
+            raise self.create_entity_error
         self.created_entity = entity
 
     def close(self) -> None:
         """Record that the adapter closed the client."""
         self.closed = True
+
+
+def make_table_entity(count: int, etag: str) -> FakeTableEntity:
+    """Build a Table API entity with its server-issued concurrency token."""
+    return FakeTableEntity(count=count, etag=etag)
 
 
 def make_request(method: str) -> func.HttpRequest:
@@ -208,6 +233,11 @@ class TableVisitorCounterRepositoryTests(unittest.TestCase):
             {'PartitionKey': 'resume', 'RowKey': 'counter', 'Count': 42},
         )
         self.assertEqual(table_client.update_arguments['etag'], 'etag-1')
+        self.assertEqual(table_client.update_arguments['mode'], UpdateMode.MERGE)
+        self.assertEqual(
+            table_client.update_arguments['match_condition'],
+            MatchConditions.IfNotModified,
+        )
 
     def test_get_count_returns_the_seeded_entity_value(self) -> None:
         """Read the persisted Count property through the Table adapter."""
@@ -216,15 +246,40 @@ class TableVisitorCounterRepositoryTests(unittest.TestCase):
         self.assertEqual(repository.get_count(), VisitorCount(41))
 
     def test_increment_count_retries_an_optimistic_concurrency_conflict(self) -> None:
-        """Retry a conditional update when another request changes the entity first."""
+        """Reload the latest count and ETag before retrying a conflicted update."""
         table_client = FakeTableClient(count=41)
+        table_client.entity_reads = [
+            make_table_entity(count=41, etag='etag-1'),
+            make_table_entity(count=42, etag='etag-2'),
+        ]
         table_client.update_errors.append(ResourceModifiedError(message='Conflict.'))
         repository = TableVisitorCounterRepository(table_client=table_client)
 
         result = repository.increment_count()
 
-        self.assertEqual(result, VisitorCount(42))
-        self.assertEqual(table_client.entity['Count'], 42)
+        self.assertEqual(result, VisitorCount(43))
+        self.assertEqual(len(table_client.update_calls), 2)
+        self.assertEqual(table_client.update_calls[0]['entity']['Count'], 42)
+        self.assertEqual(table_client.update_calls[0]['etag'], 'etag-1')
+        self.assertEqual(table_client.update_calls[1]['entity']['Count'], 43)
+        self.assertEqual(table_client.update_calls[1]['etag'], 'etag-2')
+        self.assertTrue(
+            all(
+                call['match_condition'] is MatchConditions.IfNotModified
+                for call in table_client.update_calls
+            )
+        )
+
+    def test_increment_count_rejects_an_entity_without_an_etag(self) -> None:
+        """Prevent unconditional writes when the Table API omits its ETag."""
+        table_client = FakeTableClient(count=41)
+        table_client.entity.metadata.pop('etag')
+        repository = TableVisitorCounterRepository(table_client=table_client)
+
+        with self.assertRaises(VisitorCounterStorageError):
+            repository.increment_count()
+
+        self.assertEqual(table_client.update_calls, [])
 
     def test_azurite_mode_initializes_a_local_seed_entity(self) -> None:
         """Use the local connection string without constructing Azure credentials."""
@@ -253,6 +308,31 @@ class TableVisitorCounterRepositoryTests(unittest.TestCase):
             table_client.created_entity,
             {'PartitionKey': 'resume', 'RowKey': 'counter', 'Count': 0},
         )
+
+    def test_azurite_mode_does_not_reset_an_existing_counter(self) -> None:
+        """Preserve the existing local counter when its seed entity already exists."""
+        table_client = FakeTableClient(count=9)
+        table_client.create_entity_error = ResourceExistsError(message='Already exists.')
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    'VISITOR_COUNTER_STORAGE': 'azurite',
+                    'AZURE_TABLES_CONNECTION_STRING': 'UseDevelopmentStorage=true',
+                    'AZURE_TABLES_TABLE_NAME': 'visitorcounter',
+                },
+                clear=True,
+            ),
+            patch(
+                'infrastructure.table_visitor_counter.TableClient.from_connection_string',
+                return_value=table_client,
+            ),
+        ):
+            repository = create_visitor_counter_repository()
+
+        self.assertEqual(repository.get_count(), VisitorCount(9))
+        self.assertIsNone(table_client.created_entity)
 
     def test_cosmos_mode_uses_managed_identity_settings(self) -> None:
         """Build the production adapter from app settings without local storage keys."""
