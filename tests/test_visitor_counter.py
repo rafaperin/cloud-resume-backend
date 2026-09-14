@@ -8,13 +8,14 @@ import unittest
 from unittest.mock import patch
 
 import azure.functions as func
+from azure.core.exceptions import ResourceModifiedError, ResourceNotFoundError
 from azure.data.tables import TableEntity
 
 
 BACKEND_DIRECTORY = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIRECTORY))
 
-from application.errors import VisitorCounterStorageError
+from application.errors import VisitorCounterNotFoundError, VisitorCounterStorageError
 from application.visitor_counter import GetVisitorCount, IncrementVisitorCount
 from domain.visitor_counter import VisitorCount
 from function_app import get_visitor, increment_visitor
@@ -68,6 +69,7 @@ class FakeTableClient:
         self.update_arguments: dict[str, object] | None = None
         self.created_entity: dict[str, object] | None = None
         self.create_table_called = False
+        self.update_errors: list[Exception] = []
         self.closed = False
 
     def get_entity(self, partition_key: str, row_key: str) -> TableEntity:
@@ -78,6 +80,8 @@ class FakeTableClient:
 
     def update_entity(self, **kwargs: object) -> None:
         """Record the update request and persist the merged count for the fake."""
+        if self.update_errors:
+            raise self.update_errors.pop(0)
         self.update_arguments = kwargs
         entity = kwargs['entity']
         if not isinstance(entity, dict):
@@ -129,6 +133,11 @@ class VisitorCounterUseCaseTests(unittest.TestCase):
 
         self.assertEqual(result, VisitorCount(42))
         self.assertEqual(repository.count, 42)
+
+    def test_visitor_count_rejects_negative_values(self) -> None:
+        """Prevent invalid counts from reaching an adapter or HTTP response."""
+        with self.assertRaises(ValueError):
+            VisitorCount(-1)
 
 
 class VisitorCounterHttpTests(unittest.TestCase):
@@ -200,6 +209,23 @@ class TableVisitorCounterRepositoryTests(unittest.TestCase):
         )
         self.assertEqual(table_client.update_arguments['etag'], 'etag-1')
 
+    def test_get_count_returns_the_seeded_entity_value(self) -> None:
+        """Read the persisted Count property through the Table adapter."""
+        repository = TableVisitorCounterRepository(table_client=FakeTableClient(count=41))
+
+        self.assertEqual(repository.get_count(), VisitorCount(41))
+
+    def test_increment_count_retries_an_optimistic_concurrency_conflict(self) -> None:
+        """Retry a conditional update when another request changes the entity first."""
+        table_client = FakeTableClient(count=41)
+        table_client.update_errors.append(ResourceModifiedError(message='Conflict.'))
+        repository = TableVisitorCounterRepository(table_client=table_client)
+
+        result = repository.increment_count()
+
+        self.assertEqual(result, VisitorCount(42))
+        self.assertEqual(table_client.entity['Count'], 42)
+
     def test_azurite_mode_initializes_a_local_seed_entity(self) -> None:
         """Use the local connection string without constructing Azure credentials."""
         table_client = FakeTableClient()
@@ -227,3 +253,42 @@ class TableVisitorCounterRepositoryTests(unittest.TestCase):
             table_client.created_entity,
             {'PartitionKey': 'resume', 'RowKey': 'counter', 'Count': 0},
         )
+
+    def test_cosmos_mode_uses_managed_identity_settings(self) -> None:
+        """Build the production adapter from app settings without local storage keys."""
+        table_client = FakeTableClient()
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    'COSMOS_TABLE_ENDPOINT': 'https://example.table.cosmos.azure.com:443/',
+                    'COSMOS_TABLE_NAME': 'visitorcounter',
+                },
+                clear=True,
+            ),
+            patch('infrastructure.table_visitor_counter.DefaultAzureCredential') as credential_type,
+            patch('infrastructure.table_visitor_counter.TableClient', return_value=table_client) as client_type,
+        ):
+            repository = TableVisitorCounterRepository.from_cosmos_environment()
+
+        self.assertIsInstance(repository, TableVisitorCounterRepository)
+        client_type.assert_called_once()
+        self.assertIs(repository._credential, credential_type.return_value)
+
+    def test_missing_entity_maps_to_an_application_error(self) -> None:
+        """Avoid leaking Azure SDK errors beyond the infrastructure boundary."""
+        table_client = FakeTableClient()
+        table_client.get_entity = lambda **_: (_ for _ in ()).throw(
+            ResourceNotFoundError(message='Missing.')
+        )
+        repository = TableVisitorCounterRepository(table_client=table_client)
+
+        with self.assertRaises(VisitorCounterNotFoundError):
+            repository.get_count()
+
+    def test_invalid_storage_mode_is_rejected(self) -> None:
+        """Fail fast when local configuration selects an unknown adapter."""
+        with patch.dict(os.environ, {'VISITOR_COUNTER_STORAGE': 'unknown'}, clear=True):
+            with self.assertRaises(VisitorCounterStorageError):
+                create_visitor_counter_repository()
