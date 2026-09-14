@@ -106,7 +106,6 @@ resource functionCosmosDataContributor 'Microsoft.DocumentDB/databaseAccounts/ta
   }
 }
 
-output cosmosAccountId string = cosmosAccount.id
 output cosmosAccountName string = cosmosAccount.name
 output cosmosTableEndpoint string = 'https://${cosmosAccount.name}.table.cosmos.azure.com:443/'
 output cosmosTableName string = visitorCounterTable.name

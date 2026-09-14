@@ -84,23 +84,13 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-08-01'
   properties: {
     staticWebsite: {
       enabled: true
-      indexDocument: 'index.html'
+      defaultIndexDocumentPath: 'index.html'
+      errorDocument404Path: '404.html'
     }
   }
 }
 
-resource functionDeploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
-  parent: blobService
-  name: 'function-releases'
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-output storageAccountId string = storageAccount.id
 output storageAccountName string = storageAccount.name
-output blobEndpoint string = storageAccount.properties.primaryEndpoints.blob
-output functionDeploymentContainerName string = functionDeploymentContainer.name
 output staticWebsiteUrl string = storageAccount.properties.primaryEndpoints.web
 output customDomainName string = customDomainName
 output customDomainRegistrationEnabled bool = customDomainRegistrationEnabled

@@ -170,7 +170,7 @@ class TableVisitorCounterRepositoryTests(unittest.TestCase):
                 {
                     'VISITOR_COUNTER_STORAGE': 'azurite',
                     'AZURE_TABLES_CONNECTION_STRING': 'UseDevelopmentStorage=true',
-                    'AZURE_TABLES_TABLE_NAME': 'visitorcounter',
+                    'VISITOR_TABLE_NAME': 'visitorcounter',
                 },
                 clear=True,
             ),
@@ -199,7 +199,7 @@ class TableVisitorCounterRepositoryTests(unittest.TestCase):
                 {
                     'VISITOR_COUNTER_STORAGE': 'azurite',
                     'AZURE_TABLES_CONNECTION_STRING': 'UseDevelopmentStorage=true',
-                    'AZURE_TABLES_TABLE_NAME': 'visitorcounter',
+                    'VISITOR_TABLE_NAME': 'visitorcounter',
                 },
                 clear=True,
             ),
@@ -222,7 +222,7 @@ class TableVisitorCounterRepositoryTests(unittest.TestCase):
                 os.environ,
                 {
                     'COSMOS_TABLE_ENDPOINT': 'https://example.table.cosmos.azure.com:443/',
-                    'COSMOS_TABLE_NAME': 'visitorcounter',
+                    'VISITOR_TABLE_NAME': 'visitorcounter',
                 },
                 clear=True,
             ),

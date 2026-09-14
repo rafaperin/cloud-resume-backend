@@ -9,16 +9,18 @@ This deployment creates the development resource group, static-website storage a
 - Name: rg-cloudresume-dev-eus2
 - Region: East US 2
 - Tags: Project, Environment, ManagedBy, and Owner
-- Storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with index.html as the default document
+- Frontend storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with `index.html` and `404.html` as its default and error documents
 - Optional Azure Storage custom-domain registration, configured through CUSTOM_DOMAIN_NAME and REGISTER_STORAGE_CUSTOM_DOMAIN
 - Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 400 RU/s
 - Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `Count=0`
 - Azure Functions: a Linux Flex Consumption (`FC1`) plan and a Python 3.13 Function App with a system-assigned managed identity
-- Function deployment storage: a private `function-releases` blob container in the existing storage account, accessed with the Function App's managed identity
+- Function backing storage: a separate StorageV2, Standard_LRS account with a private `function-releases` blob container, accessed only through the Function App's managed identity
 - Function data access: a Cosmos DB Built-in Data Contributor assignment for the Function App identity, scoped to the Table API account
-- Function API configuration: the Table API endpoint and `visitorcounter` table name are supplied as application settings; CORS allows the configured custom-domain origin
+- Function API configuration: `COSMOS_TABLE_ENDPOINT`, `VISITOR_TABLE_NAME`, and `VISITOR_COUNTER_STORAGE=cosmos` are supplied as application settings; CORS allows the configured custom-domain origin
 
-The Standard_LRS storage account is usage-billed. Cosmos DB is capped at 400 RU/s, the minimum manual provisioned throughput for this Table API workload. This remains within the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
+The two Standard_LRS storage accounts are usage-billed. The separate Function backing account is required by Azure Functions and keeps runtime and deployment access away from the public website files. Cosmos DB is capped at 400 RU/s, the minimum manual provisioned throughput for this Table API workload. This remains within the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
+
+The templates do not contain subscription IDs, tenant IDs, principal IDs, storage keys, connection strings, or deployment-specific resource names. The ignored root `.env` supplies the deploying user’s principal ID at deployment time. Root deployment outputs contain only the names and public endpoints required by `deploy.sh`; identity and resource IDs remain internal to the deployment.
 
 The Function App uses 512 MB on-demand instances, has no always-ready instances, and is capped at 10 instances. Flex Consumption provides a monthly on-demand free grant of 250,000 executions and 100,000 GB-seconds per subscription, but it is a usage-billed service after that allowance. This configuration limits scale but does not impose a spending cap; review the Azure estimate before deployment.
 
@@ -66,7 +68,7 @@ Run a what-if deployment from this directory before deploying:
 ./deploy.sh what-if
 ~~~
 
-Review the result. It should show one resource-group creation, one Standard_LRS storage-account update, the private `function-releases` container, one Flex Consumption plan, one Function App with its system-assigned identity, Function App storage and Cosmos data-plane role assignments, one Cosmos DB Table API account, one `visitorcounter` table at 400 RU/s, and no deletions or SKU changes. If .env is not loaded, the deploying-user role assignments are skipped.
+Review the result. It should show one resource-group creation, two Standard_LRS storage accounts, the private Function `function-releases` container, one Flex Consumption plan, one Function App with its system-assigned identity, Function App storage and Cosmos data-plane role assignments, one Cosmos DB Table API account, one `visitorcounter` table at 400 RU/s, and no deletions or SKU changes.
 
 ## Deploy
 
@@ -89,7 +91,7 @@ az deployment sub show \
   --output tsv
 ~~~
 
-Flex Consumption requires a OneDeploy package in the private `function-releases` container. Provisioning infrastructure does not publish function source code. Publish the Python Function App in a later step after its implementation and deployment workflow are in place.
+Flex Consumption requires a OneDeploy package in the private `function-releases` container in the Function backing storage account. Provisioning infrastructure does not publish function source code. Publish the Python Function App in a later step after its implementation and deployment workflow are in place.
 
 ## Seed the visitor counter
 

@@ -30,6 +30,7 @@ param customDomainName string = ''
 param customDomainRegistrationEnabled bool = false
 
 var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
+var functionStorageAccountName = 'stfuncdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var cosmosAccountName = 'cosmos-cloudresume-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var functionAppName = 'func-cr-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var functionPlanName = 'plan-cr-dev-eus2'
@@ -61,6 +62,18 @@ module storageAccount './storage.bicep' = {
   }
 }
 
+module functionStorage './function-storage.bicep' = {
+  name: 'functionStorageDeployment'
+  scope: resourceGroup
+  params: {
+    storageAccountName: functionStorageAccountName
+    location: location
+    projectTag: projectTag
+    environmentTag: environmentTag
+    ownerTag: ownerTag
+  }
+}
+
 module functionApp './function-app.bicep' = {
   name: 'functionAppDeployment'
   scope: resourceGroup
@@ -71,9 +84,9 @@ module functionApp './function-app.bicep' = {
     projectTag: projectTag
     environmentTag: environmentTag
     ownerTag: ownerTag
-    storageAccountName: storageAccount.outputs.storageAccountName
-    storageBlobEndpoint: storageAccount.outputs.blobEndpoint
-    deploymentContainerName: storageAccount.outputs.functionDeploymentContainerName
+    storageAccountName: functionStorage.outputs.storageAccountName
+    storageBlobEndpoint: functionStorage.outputs.blobEndpoint
+    deploymentContainerName: functionStorage.outputs.deploymentContainerName
     cosmosTableEndpoint: 'https://${cosmosAccountName}.table.cosmos.azure.com:443/'
     cosmosTableName: 'visitorcounter'
     frontendOrigin: empty(customDomainName) ? '' : 'https://${customDomainName}'
@@ -95,17 +108,14 @@ module cosmosDb './cosmos-db.bicep' = {
   }
 }
 
-output resourceGroupId string = resourceGroup.id
 output resourceGroupName string = resourceGroup.name
 output resourceGroupLocation string = resourceGroup.location
-output storageAccountId string = storageAccount.outputs.storageAccountId
 output storageAccountName string = storageAccount.outputs.storageAccountName
 output staticWebsiteUrl string = storageAccount.outputs.staticWebsiteUrl
 output functionAppName string = functionApp.outputs.functionAppName
 output functionAppUrl string = functionApp.outputs.functionAppUrl
 output customDomainName string = storageAccount.outputs.customDomainName
 output customDomainRegistrationEnabled bool = storageAccount.outputs.customDomainRegistrationEnabled
-output cosmosAccountId string = cosmosDb.outputs.cosmosAccountId
 output cosmosAccountName string = cosmosDb.outputs.cosmosAccountName
 output cosmosTableEndpoint string = cosmosDb.outputs.cosmosTableEndpoint
 output cosmosTableName string = cosmosDb.outputs.cosmosTableName

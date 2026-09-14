@@ -27,7 +27,7 @@ def read_required_setting(name: str) -> str:
 def seed_counter() -> bool:
     """Create the counter entity and return whether this invocation created it."""
     endpoint = read_required_setting('COSMOS_TABLE_ENDPOINT')
-    table_name = read_required_setting('COSMOS_TABLE_NAME')
+    table_name = read_required_setting('VISITOR_TABLE_NAME')
 
     credential = DefaultAzureCredential()
     client = TableClient(

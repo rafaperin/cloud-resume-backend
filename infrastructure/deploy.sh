@@ -85,7 +85,7 @@ case "$action" in
     fi
 
     COSMOS_TABLE_ENDPOINT="$cosmos_table_endpoint" \
-      COSMOS_TABLE_NAME="$cosmos_table_name" \
+      VISITOR_TABLE_NAME="$cosmos_table_name" \
       python3 "$project_root/backend/tools/seed_visitor_counter.py"
     ;;
   what-if)

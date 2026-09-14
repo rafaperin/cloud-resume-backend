@@ -41,7 +41,7 @@ class TableVisitorCounterRepository:
     def from_cosmos_environment(cls) -> 'TableVisitorCounterRepository':
         """Build a repository using Cosmos Table settings and managed identity."""
         endpoint = _read_required_setting('COSMOS_TABLE_ENDPOINT')
-        table_name = _read_required_setting('COSMOS_TABLE_NAME')
+        table_name = _read_required_setting('VISITOR_TABLE_NAME')
         credential = DefaultAzureCredential()
         table_client = TableClient(
             endpoint=endpoint,
@@ -55,7 +55,7 @@ class TableVisitorCounterRepository:
     def from_connection_string(cls) -> 'TableVisitorCounterRepository':
         """Build a local repository using an Azure Tables-compatible connection string."""
         connection_string = _read_required_setting('AZURE_TABLES_CONNECTION_STRING')
-        table_name = _read_required_setting('AZURE_TABLES_TABLE_NAME')
+        table_name = _read_required_setting('VISITOR_TABLE_NAME')
         table_client = TableClient.from_connection_string(
             conn_str=connection_string,
             table_name=table_name,

@@ -126,7 +126,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: cosmosTableEndpoint
         }
         {
-          name: 'COSMOS_TABLE_NAME'
+          name: 'VISITOR_TABLE_NAME'
           value: cosmosTableName
         }
         {
