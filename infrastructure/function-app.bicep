@@ -129,6 +129,10 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           name: 'COSMOS_TABLE_NAME'
           value: cosmosTableName
         }
+        {
+          name: 'VISITOR_COUNTER_STORAGE'
+          value: 'cosmos'
+        }
       ]
     }
   }

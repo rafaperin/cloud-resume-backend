@@ -1,11 +1,11 @@
-"""Azure Cosmos DB for Table adapter for the visitor counter."""
+"""Table API adapters for cloud Cosmos DB and local Azurite development."""
 
 import os
 from collections.abc import Mapping
 from typing import Protocol
 
 from azure.core import MatchConditions
-from azure.core.exceptions import AzureError, ResourceModifiedError, ResourceNotFoundError
+from azure.core.exceptions import AzureError, ResourceExistsError, ResourceModifiedError, ResourceNotFoundError
 from azure.data.tables import TableClient, UpdateMode
 from azure.identity import DefaultAzureCredential
 
@@ -26,8 +26,8 @@ class Closable(Protocol):
         """Release resources held by the object."""
 
 
-class CosmosTableVisitorCounterRepository:
-    """Persist visitor counts in the seeded Cosmos DB for Table entity."""
+class TableVisitorCounterRepository:
+    """Persist visitor counts through the Azure Tables SDK."""
 
     def __init__(
         self,
@@ -38,8 +38,8 @@ class CosmosTableVisitorCounterRepository:
         self._credential = credential
 
     @classmethod
-    def from_environment(cls) -> 'CosmosTableVisitorCounterRepository':
-        """Build a repository using Function App settings and managed identity."""
+    def from_cosmos_environment(cls) -> 'TableVisitorCounterRepository':
+        """Build a repository using Cosmos Table settings and managed identity."""
         endpoint = _read_required_setting('COSMOS_TABLE_ENDPOINT')
         table_name = _read_required_setting('COSMOS_TABLE_NAME')
         credential = DefaultAzureCredential()
@@ -50,6 +50,19 @@ class CosmosTableVisitorCounterRepository:
             audience='https://cosmos.azure.com',
         )
         return cls(table_client=table_client, credential=credential)
+
+    @classmethod
+    def from_connection_string(cls) -> 'TableVisitorCounterRepository':
+        """Build a local repository using an Azure Tables-compatible connection string."""
+        connection_string = _read_required_setting('AZURE_TABLES_CONNECTION_STRING')
+        table_name = _read_required_setting('AZURE_TABLES_TABLE_NAME')
+        table_client = TableClient.from_connection_string(
+            conn_str=connection_string,
+            table_name=table_name,
+        )
+        repository = cls(table_client=table_client)
+        repository._ensure_counter_entity()
+        return repository
 
     def get_count(self) -> VisitorCount:
         """Return the count stored in the seeded entity."""
@@ -101,6 +114,42 @@ class CosmosTableVisitorCounterRepository:
         except AzureError as error:
             message = 'Unable to read the visitor counter.'
             raise VisitorCounterStorageError(message) from error
+
+    def _ensure_counter_entity(self) -> None:
+        """Create the local table and seed entity when they do not exist."""
+        try:
+            self._table_client.create_table()
+        except ResourceExistsError:
+            pass
+        except AzureError as error:
+            message = 'Unable to initialize the local visitor counter table.'
+            raise VisitorCounterStorageError(message) from error
+
+        try:
+            self._table_client.create_entity(
+                entity={
+                    'PartitionKey': COUNTER_PARTITION_KEY,
+                    'RowKey': COUNTER_ROW_KEY,
+                    COUNT_PROPERTY_NAME: 0,
+                }
+            )
+        except ResourceExistsError:
+            return
+        except AzureError as error:
+            message = 'Unable to seed the local visitor counter entity.'
+            raise VisitorCounterStorageError(message) from error
+
+
+def create_visitor_counter_repository() -> TableVisitorCounterRepository:
+    """Select the cloud or fully local Table API adapter from application settings."""
+    storage_mode = os.environ.get('VISITOR_COUNTER_STORAGE', 'cosmos').casefold()
+    if storage_mode == 'azurite':
+        return TableVisitorCounterRepository.from_connection_string()
+    if storage_mode == 'cosmos':
+        return TableVisitorCounterRepository.from_cosmos_environment()
+
+    message = 'VISITOR_COUNTER_STORAGE must be cosmos or azurite.'
+    raise VisitorCounterStorageError(message)
 
 
 def _read_required_setting(name: str) -> str:

@@ -9,7 +9,10 @@ import azure.functions as func
 from application.errors import VisitorCounterError
 from application.visitor_counter import GetVisitorCount, IncrementVisitorCount
 from domain.visitor_counter import VisitorCount
-from infrastructure.cosmos_table_visitor_counter import CosmosTableVisitorCounterRepository
+from infrastructure.table_visitor_counter import (
+    TableVisitorCounterRepository,
+    create_visitor_counter_repository,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -33,12 +36,12 @@ def increment_visitor(req: func.HttpRequest) -> func.HttpResponse:
 
 
 def _execute_counter_request(
-    use_case_type: Callable[[CosmosTableVisitorCounterRepository], GetVisitorCount | IncrementVisitorCount],
+    use_case_type: Callable[[TableVisitorCounterRepository], GetVisitorCount | IncrementVisitorCount],
 ) -> func.HttpResponse:
     """Compose the use case at the delivery boundary and map errors to HTTP."""
-    repository: CosmosTableVisitorCounterRepository | None = None
+    repository: TableVisitorCounterRepository | None = None
     try:
-        repository = CosmosTableVisitorCounterRepository.from_environment()
+        repository = create_visitor_counter_repository()
         count = use_case_type(repository).execute()
     except VisitorCounterError:
         logger.warning('visitor_counter_unavailable')

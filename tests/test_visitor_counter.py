@@ -1,6 +1,7 @@
 """Tests for visitor-counter use cases, delivery, and Table API adapter."""
 
 import json
+import os
 from pathlib import Path
 import sys
 import unittest
@@ -17,7 +18,10 @@ from application.errors import VisitorCounterStorageError
 from application.visitor_counter import GetVisitorCount, IncrementVisitorCount
 from domain.visitor_counter import VisitorCount
 from function_app import get_visitor, increment_visitor
-from infrastructure.cosmos_table_visitor_counter import CosmosTableVisitorCounterRepository
+from infrastructure.table_visitor_counter import (
+    TableVisitorCounterRepository,
+    create_visitor_counter_repository,
+)
 
 
 class FakeVisitorCounterRepository:
@@ -62,6 +66,8 @@ class FakeTableClient:
         )
         self.entity.metadata['etag'] = 'etag-1'
         self.update_arguments: dict[str, object] | None = None
+        self.created_entity: dict[str, object] | None = None
+        self.create_table_called = False
         self.closed = False
 
     def get_entity(self, partition_key: str, row_key: str) -> TableEntity:
@@ -77,6 +83,14 @@ class FakeTableClient:
         if not isinstance(entity, dict):
             raise AssertionError('Expected a dictionary entity.')
         self.entity['Count'] = entity['Count']
+
+    def create_table(self) -> None:
+        """Record initialization of the local table."""
+        self.create_table_called = True
+
+    def create_entity(self, entity: dict[str, object]) -> None:
+        """Record initialization of the local counter entity."""
+        self.created_entity = entity
 
     def close(self) -> None:
         """Record that the adapter closed the client."""
@@ -125,7 +139,7 @@ class VisitorCounterHttpTests(unittest.TestCase):
         repository = FakeVisitorCounterRepository(count=41)
 
         with patch(
-            'function_app.CosmosTableVisitorCounterRepository.from_environment',
+            'function_app.create_visitor_counter_repository',
             return_value=repository,
         ):
             response = get_visitor(make_request('GET'))
@@ -139,7 +153,7 @@ class VisitorCounterHttpTests(unittest.TestCase):
         repository = FakeVisitorCounterRepository(count=41)
 
         with patch(
-            'function_app.CosmosTableVisitorCounterRepository.from_environment',
+            'function_app.create_visitor_counter_repository',
             return_value=repository,
         ):
             response = increment_visitor(make_request('POST'))
@@ -153,7 +167,7 @@ class VisitorCounterHttpTests(unittest.TestCase):
         repository = FailingVisitorCounterRepository()
 
         with patch(
-            'function_app.CosmosTableVisitorCounterRepository.from_environment',
+            'function_app.create_visitor_counter_repository',
             return_value=repository,
         ):
             response = get_visitor(make_request('GET'))
@@ -166,13 +180,13 @@ class VisitorCounterHttpTests(unittest.TestCase):
         self.assertTrue(repository.closed)
 
 
-class CosmosTableVisitorCounterRepositoryTests(unittest.TestCase):
-    """Verify Cosmos Table adapter persistence behavior without Azure access."""
+class TableVisitorCounterRepositoryTests(unittest.TestCase):
+    """Verify Table API adapter persistence behavior without Azure access."""
 
     def test_increment_count_uses_the_seeded_entity_and_its_etag(self) -> None:
         """Issue a conditional update with the next Count value."""
         table_client = FakeTableClient(count=41)
-        repository = CosmosTableVisitorCounterRepository(table_client=table_client)
+        repository = TableVisitorCounterRepository(table_client=table_client)
 
         result = repository.increment_count()
 
@@ -185,3 +199,31 @@ class CosmosTableVisitorCounterRepositoryTests(unittest.TestCase):
             {'PartitionKey': 'resume', 'RowKey': 'counter', 'Count': 42},
         )
         self.assertEqual(table_client.update_arguments['etag'], 'etag-1')
+
+    def test_azurite_mode_initializes_a_local_seed_entity(self) -> None:
+        """Use the local connection string without constructing Azure credentials."""
+        table_client = FakeTableClient()
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    'VISITOR_COUNTER_STORAGE': 'azurite',
+                    'AZURE_TABLES_CONNECTION_STRING': 'UseDevelopmentStorage=true',
+                    'AZURE_TABLES_TABLE_NAME': 'visitorcounter',
+                },
+                clear=True,
+            ),
+            patch(
+                'infrastructure.table_visitor_counter.TableClient.from_connection_string',
+                return_value=table_client,
+            ),
+        ):
+            repository = create_visitor_counter_repository()
+
+        self.assertIsInstance(repository, TableVisitorCounterRepository)
+        self.assertTrue(table_client.create_table_called)
+        self.assertEqual(
+            table_client.created_entity,
+            {'PartitionKey': 'resume', 'RowKey': 'counter', 'Count': 0},
+        )

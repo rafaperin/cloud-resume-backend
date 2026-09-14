@@ -3,7 +3,8 @@
     "Values": {
         "AzureWebJobsStorage": "UseDevelopmentStorage=true",
         "FUNCTIONS_WORKER_RUNTIME": "python",
-        "COSMOS_TABLE_ENDPOINT": "https://<account-name>.table.cosmos.azure.com:443/",
-        "COSMOS_TABLE_NAME": "visitorcounter"
+        "VISITOR_COUNTER_STORAGE": "azurite",
+        "AZURE_TABLES_CONNECTION_STRING": "UseDevelopmentStorage=true",
+        "AZURE_TABLES_TABLE_NAME": "visitorcounter"
     }
 }
