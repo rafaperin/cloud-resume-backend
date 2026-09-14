@@ -101,7 +101,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       }
       runtime: {
         name: 'python'
-        version: '3.11'
+        version: '3.13'
       }
       scaleAndConcurrency: {
         instanceMemoryMB: 512

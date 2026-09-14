@@ -13,7 +13,7 @@ This deployment creates the development resource group, static-website storage a
 - Optional Azure Storage custom-domain registration, configured through CUSTOM_DOMAIN_NAME and REGISTER_STORAGE_CUSTOM_DOMAIN
 - Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 400 RU/s
 - Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `Count=0`
-- Azure Functions: a Linux Flex Consumption (`FC1`) plan and a Python 3.11 Function App with a system-assigned managed identity
+- Azure Functions: a Linux Flex Consumption (`FC1`) plan and a Python 3.13 Function App with a system-assigned managed identity
 - Function deployment storage: a private `function-releases` blob container in the existing storage account, accessed with the Function App's managed identity
 - Function data access: a Cosmos DB Built-in Data Contributor assignment for the Function App identity, scoped to the Table API account
 - Function API configuration: the Table API endpoint and `visitorcounter` table name are supplied as application settings; CORS allows the configured custom-domain origin
