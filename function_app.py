@@ -18,15 +18,17 @@ app = func.FunctionApp()
 
 @app.function_name(name='GetVisitorCount')
 @app.route(route='visitor', methods=['GET'], auth_level=func.AuthLevel.ANONYMOUS)
-def get_visitor(_: func.HttpRequest) -> func.HttpResponse:
+def get_visitor(req: func.HttpRequest) -> func.HttpResponse:
     """Return the current resume visitor count."""
+    del req
     return _execute_counter_request(GetVisitorCount)
 
 
 @app.function_name(name='IncrementVisitorCount')
 @app.route(route='visitor', methods=['POST'], auth_level=func.AuthLevel.ANONYMOUS)
-def increment_visitor(_: func.HttpRequest) -> func.HttpResponse:
+def increment_visitor(req: func.HttpRequest) -> func.HttpResponse:
     """Increment and return the resume visitor count."""
+    del req
     return _execute_counter_request(IncrementVisitorCount)
 
 
