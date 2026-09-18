@@ -1,0 +1,40 @@
+# Python environments, bytecode, and build artifacts
+.venv/
+.venv*/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tests and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Azure Functions local files
+local.settings.json
+.python_packages/
+bin/
+obj/
+
+# Environment files and credentials
+.env
+.env.*
+!.env.example
+*.pfx
+*.pem
+*.key
+*.publishsettings
+
+# Editor and operating-system files
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db

@@ -8,7 +8,15 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
-project_root="$(cd -- "$script_dir/../.." && pwd)"
+backend_directory="$(cd -- "$script_dir/.." && pwd)"
+monorepo_root="$(cd -- "$backend_directory/.." && pwd)"
+
+if [[ -d "$monorepo_root/frontend" ]]; then
+  project_root="$monorepo_root"
+else
+  project_root="$backend_directory"
+fi
+
 environment_file="$project_root/.env"
 frontend_source_directory="$project_root/frontend"
 action="$1"
@@ -86,7 +94,7 @@ case "$action" in
 
     COSMOS_TABLE_ENDPOINT="$cosmos_table_endpoint" \
       VISITOR_TABLE_NAME="$cosmos_table_name" \
-      python3 "$project_root/backend/tools/seed_visitor_counter.py"
+      python3 "$backend_directory/tools/seed_visitor_counter.py"
     ;;
   what-if)
     operation='what-if'
