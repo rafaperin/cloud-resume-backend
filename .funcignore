@@ -6,3 +6,7 @@ local.settings.json
 local.settings.json.example
 tests/
 tools/
+infrastructure/*.bicep
+infrastructure/*.bicepparam
+infrastructure/deploy.sh
+infrastructure/README.md
