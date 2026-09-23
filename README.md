@@ -23,6 +23,16 @@ Cosmos DB for Table
 - Bicep infrastructure as code
 - Standard-library `unittest` and Coverage.py
 
+## Repository ownership
+
+This repository is the single source of truth for the Cloud Resume backend:
+
+- Python application code, tests, and backend tooling
+- Azure Functions configuration and deployment packaging
+- Bicep infrastructure and backend CI/CD
+
+Frontend HTML, CSS, JavaScript, and frontend CI/CD belong in the separate `cloud-resume-frontend` repository. Do not mirror backend changes into the legacy mixed repository.
+
 ## Repository layout
 
 ```text
