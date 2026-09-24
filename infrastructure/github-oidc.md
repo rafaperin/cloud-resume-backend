@@ -13,7 +13,7 @@ az identity create \
   --location eastus2
 ~~~
 
-Assign `Contributor` and `Role Based Access Control Administrator` at the selected subscription scope. The latter is required because the Bicep templates create Azure role assignments. Restrict this identity further with a custom role when the infrastructure scope is stable.
+Assign `Contributor` and `Role Based Access Control Administrator` at the selected subscription scope. The latter is required because the Bicep templates create Azure role assignments. Also assign `Website Contributor` at the Function App scope so the Functions deployment action can publish code. Restrict this identity further with a custom role when the infrastructure scope is stable.
 
 Create a federated credential that trusts only the `main` branch of `rafaperin/cloud-resume-backend`, with issuer `https://token.actions.githubusercontent.com` and audience `api://AzureADTokenExchange`. Use GitHub's current immutable OIDC subject format for this repository when creating the credential.
 
@@ -25,9 +25,12 @@ Configure these repository secrets from the deployment identity and selected Azu
 - `AZURE_TENANT_ID`
 - `AZURE_SUBSCRIPTION_ID`
 
-Configure these repository variables for the Bicep parameter file:
+Configure the deployment principal as a repository secret, because Bicep reads it from an environment variable during workflow execution:
 
 - `DEPLOYER_PRINCIPAL_ID`
+
+Configure these repository variables for the non-secret Bicep configuration:
+
 - `CUSTOM_DOMAIN_NAME`
 - `REGISTER_STORAGE_CUSTOM_DOMAIN`
 
