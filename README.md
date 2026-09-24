@@ -86,3 +86,9 @@ az bicep build --file infrastructure/main.bicep
 ~~~
 
 The backend repository does not deploy frontend files. The frontend is maintained and deployed from its own repository.
+
+## CI/CD
+
+GitHub Actions runs backend tests with the 80% coverage gate and builds and lints Bicep for pull requests. A push to `main` deploys infrastructure and the Function App only after both checks pass. Azure authentication uses GitHub OIDC; no Azure client secret or publish profile is stored in the repository.
+
+Complete the one-time [GitHub OIDC bootstrap](infrastructure/github-oidc.md) before the first deployment workflow run.
