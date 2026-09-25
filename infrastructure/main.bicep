@@ -23,11 +23,8 @@ param ownerTag string = 'rafael-ferreira'
 @minLength(1)
 param deployerPrincipalId string
 
-@description('Optional custom subdomain to register for the static website, without a scheme or path.')
+@description('Optional custom subdomain for the static website, without a scheme or path. When set, Bicep manages the Azure Storage custom-domain mapping.')
 param customDomainName string = ''
-
-@description('Whether to register the custom domain with Azure Storage. Keep false for Cloudflare-managed domains or after registration succeeds.')
-param customDomainRegistrationEnabled bool = false
 
 var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var functionStorageAccountName = 'stfuncdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
@@ -58,7 +55,6 @@ module storageAccount './storage.bicep' = {
     ownerTag: ownerTag
     deployerPrincipalId: deployerPrincipalId
     customDomainName: customDomainName
-    customDomainRegistrationEnabled: customDomainRegistrationEnabled
   }
 }
 
@@ -115,7 +111,6 @@ output staticWebsiteUrl string = storageAccount.outputs.staticWebsiteUrl
 output functionAppName string = functionApp.outputs.functionAppName
 output functionAppUrl string = functionApp.outputs.functionAppUrl
 output customDomainName string = storageAccount.outputs.customDomainName
-output customDomainRegistrationEnabled bool = storageAccount.outputs.customDomainRegistrationEnabled
 output cosmosAccountName string = cosmosDb.outputs.cosmosAccountName
 output cosmosTableEndpoint string = cosmosDb.outputs.cosmosTableEndpoint
 output cosmosTableName string = cosmosDb.outputs.cosmosTableName
