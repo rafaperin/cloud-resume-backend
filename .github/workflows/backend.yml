@@ -67,6 +67,9 @@ jobs:
     name: Deploy backend
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: backend-production
+      cancel-in-progress: false
     needs:
       - test
       - validate-infrastructure
@@ -92,7 +95,6 @@ jobs:
         env:
           DEPLOYER_PRINCIPAL_ID: ${{ secrets.DEPLOYER_PRINCIPAL_ID }}
           CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
-          REGISTER_STORAGE_CUSTOM_DOMAIN: ${{ vars.REGISTER_STORAGE_CUSTOM_DOMAIN }}
         run: |
           az deployment sub what-if \
             --name "cloudresume-${GITHUB_RUN_ID}-whatif" \
@@ -107,7 +109,6 @@ jobs:
         env:
           DEPLOYER_PRINCIPAL_ID: ${{ secrets.DEPLOYER_PRINCIPAL_ID }}
           CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
-          REGISTER_STORAGE_CUSTOM_DOMAIN: ${{ vars.REGISTER_STORAGE_CUSTOM_DOMAIN }}
         run: |
           function_app_name=$(
             az deployment sub create \
@@ -127,3 +128,11 @@ jobs:
           package: .
           remote-build: true
           respect-funcignore: true
+
+      - name: Smoke test visitor API
+        run: |
+          curl --fail --silent --show-error \
+            --retry 5 \
+            --retry-delay 5 \
+            --retry-connrefused \
+            "https://${{ steps.infrastructure.outputs.function_app_name }}.azurewebsites.net/api/visitor"

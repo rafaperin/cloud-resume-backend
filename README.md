@@ -89,6 +89,6 @@ The backend repository does not deploy frontend files. The frontend is maintaine
 
 ## CI/CD
 
-GitHub Actions runs backend tests with the 80% coverage gate and builds and lints Bicep for pull requests. A push to `main` deploys infrastructure and the Function App only after both checks pass. Azure authentication uses GitHub OIDC; no Azure client secret or publish profile is stored in the repository.
+GitHub Actions runs backend tests with the 80% coverage gate and builds and lints Bicep for pull requests. A push to `main` serializes infrastructure and Function App deployments, then verifies `GET /api/visitor` responds successfully without incrementing the counter. Azure authentication uses GitHub OIDC; no Azure client secret or publish profile is stored in the repository.
 
 Complete the one-time [GitHub OIDC bootstrap](infrastructure/github-oidc.md) before the first deployment workflow run.

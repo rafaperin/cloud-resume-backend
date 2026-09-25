@@ -36,19 +36,8 @@ if [[ -z "$DEPLOYER_PRINCIPAL_ID" ]]; then
 fi
 
 custom_domain_name="${CUSTOM_DOMAIN_NAME:-}"
-register_storage_custom_domain="${REGISTER_STORAGE_CUSTOM_DOMAIN:-false}"
 
-if [[ "$register_storage_custom_domain" != 'true' && "$register_storage_custom_domain" != 'false' ]]; then
-  printf '%s\n' 'REGISTER_STORAGE_CUSTOM_DOMAIN must be true or false.' >&2
-  exit 1
-fi
-
-if [[ "$register_storage_custom_domain" == 'true' && -z "$custom_domain_name" ]]; then
-  printf '%s\n' 'CUSTOM_DOMAIN_NAME must be set when REGISTER_STORAGE_CUSTOM_DOMAIN is true.' >&2
-  exit 1
-fi
-
-if [[ "$register_storage_custom_domain" == 'true' ]] && [[ ! "$custom_domain_name" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ ]]; then
+if [[ -n "$custom_domain_name" ]] && [[ ! "$custom_domain_name" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ ]]; then
   printf '%s\n' 'CUSTOM_DOMAIN_NAME must be a lowercase subdomain without a scheme, path, or port.' >&2
   exit 1
 fi

@@ -10,7 +10,7 @@ This deployment creates the development resource group, static-website storage a
 - Region: East US 2
 - Tags: Project, Environment, ManagedBy, and Owner
 - Frontend storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with `index.html` and `404.html` as its default and error documents
-- Optional Azure Storage custom-domain registration, configured through CUSTOM_DOMAIN_NAME and REGISTER_STORAGE_CUSTOM_DOMAIN
+- Optional Azure Storage custom-domain mapping, configured through `CUSTOM_DOMAIN_NAME`
 - Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 400 RU/s
 - Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `Count=0`
 - Azure Functions: a Linux Flex Consumption (`FC1`) plan and a Python 3.13 Function App with a system-assigned managed identity
@@ -41,13 +41,11 @@ The Bicep editor does not load .env files automatically. The parameter file uses
 
 ## Configure a custom domain
 
-Set `CUSTOM_DOMAIN_NAME` in the root `.env` to the custom **subdomain**, without `https://`, a path, or a port. The deployment defaults `REGISTER_STORAGE_CUSTOM_DOMAIN` to `false`, so Cloudflare-managed domains bypass Azure Storage's CNAME verification and do not block unrelated infrastructure updates.
+Set `CUSTOM_DOMAIN_NAME` in the root `.env` to the custom **subdomain**, without `https://`, a path, or a port. A non-empty value is the desired Azure Storage custom-domain mapping; Bicep manages that mapping on every deployment. Leave the value empty when Azure Storage custom-domain mapping is not required.
 
-If Azure Storage registration has already succeeded, leave `REGISTER_STORAGE_CUSTOM_DOMAIN=false` on future deployments to avoid re-running validation. The deployment will not request a new Storage custom-domain registration.
+The domain must be a lowercase subdomain, such as `www.example.com`; root domains, such as `example.com`, are not supported by Azure Storage custom-domain mapping.
 
-Set `REGISTER_STORAGE_CUSTOM_DOMAIN=true` only when a direct Azure Storage custom-domain registration is required. The domain must be a lowercase subdomain, such as `www.example.com`; root domains, such as `example.com`, are not supported by Azure Storage custom-domain mapping.
-
-Before running `./deploy.sh deploy` with registration enabled, create a public **DNS-only** CNAME record in Cloudflare for `asverify.<CUSTOM_DOMAIN_NAME>` that targets `asverify.<static-website-host>`. Obtain the static-website host from the deployment output:
+Before the first deployment with a custom domain, create a public **DNS-only** CNAME record in Cloudflare for `asverify.<CUSTOM_DOMAIN_NAME>` that targets `asverify.<static-website-host>`. Obtain the static-website host from the deployment output:
 
 ~~~sh
 az deployment sub show \

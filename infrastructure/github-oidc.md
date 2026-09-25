@@ -32,7 +32,6 @@ Configure the deployment principal as a repository secret, because Bicep reads i
 Configure these repository variables for the non-secret Bicep configuration:
 
 - `CUSTOM_DOMAIN_NAME`
-- `REGISTER_STORAGE_CUSTOM_DOMAIN`
 
 Do not commit any of these values. The workflow reads them only at deployment time.
 
