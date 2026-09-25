@@ -29,7 +29,7 @@ The Function App uses 512 MB on-demand instances, has no always-ready instances,
 - Azure CLI with the Bicep extension available
 - An authenticated Azure account with permission to create resource groups in the target subscription
 - The desired subscription selected with az account set
-- A root .env file containing the Microsoft Entra object ID of the user who uploads frontend files
+- A repository-root `.env` file containing the Microsoft Entra object ID used for local infrastructure deployment
 
 Copy .env.example to .env if it does not already exist, then set DEPLOYER_PRINCIPAL_ID to the object ID returned by:
 
@@ -100,12 +100,4 @@ The command uses the signed-in Azure CLI identity and the Cosmos DB Built-in Dat
 
 Azure Cosmos DB account APIs cannot be changed after creation. If a NoSQL API account from an earlier deployment exists, do not delete it automatically. Obtain explicit approval before deleting that account and recreating it with the Table API.
 
-## Publish the frontend
-
-After a successful deployment, publish the contents of the repository's frontend directory to the static website's $web container:
-
-~~~sh
-./deploy.sh publish
-~~~
-
-The command reads the storage-account name from the `cloudresume-rg-deploy` Bicep deployment output, then uses Azure CLI data-plane authentication to upload the **contents** of `frontend/`. `frontend/` itself is not created as a path in $web: `frontend/index.html` becomes `$web/index.html`, and `frontend/css/style.css` becomes `$web/css/style.css`. It overwrites blobs in $web with matching names. The deploying identity must have the Storage Blob Data Contributor role assigned by the Bicep deployment; allow a few minutes for a new role assignment to propagate.
+Frontend files are deployed by the `cloud-resume-frontend` repository and its CI/CD pipeline. This backend deployment script never uploads static website files.
