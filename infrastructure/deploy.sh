@@ -3,22 +3,13 @@
 set -euo pipefail
 
 if [[ "$#" -ne 1 ]]; then
-  printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|publish|seed-counter>' >&2
+  printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|seed-counter>' >&2
   exit 1
 fi
 
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 backend_directory="$(cd -- "$script_dir/.." && pwd)"
-monorepo_root="$(cd -- "$backend_directory/.." && pwd)"
-
-if [[ -d "$monorepo_root/frontend" ]]; then
-  project_root="$monorepo_root"
-else
-  project_root="$backend_directory"
-fi
-
-environment_file="$project_root/.env"
-frontend_source_directory="$project_root/frontend"
+environment_file="$backend_directory/.env"
 action="$1"
 
 if [[ ! -f "$environment_file" ]]; then
@@ -43,29 +34,6 @@ if [[ -n "$custom_domain_name" ]] && [[ ! "$custom_domain_name" =~ ^([a-z0-9]([a
 fi
 
 case "$action" in
-  publish)
-    if [[ ! -d "$frontend_source_directory" ]]; then
-      printf '%s\n' 'Missing frontend directory.' >&2
-      exit 1
-    fi
-
-    storage_account_name="$(az deployment sub show \
-      --name cloudresume-rg-deploy \
-      --query 'properties.outputs.storageAccountName.value' \
-      --output tsv)"
-
-    if [[ -z "$storage_account_name" ]]; then
-      printf '%s\n' 'Unable to determine the storage account. Run ./deploy.sh deploy first.' >&2
-      exit 1
-    fi
-
-    az storage blob upload-batch \
-      --account-name "$storage_account_name" \
-      --auth-mode login \
-      --destination '$web' \
-      --source "$frontend_source_directory" \
-      --overwrite true
-    ;;
   seed-counter)
     cosmos_table_endpoint="$(az deployment sub show \
       --name cloudresume-rg-deploy \
@@ -94,12 +62,12 @@ case "$action" in
     deployment_name='cloudresume-rg-deploy'
     ;;
   *)
-    printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|publish|seed-counter>' >&2
+    printf '%s\n' 'Usage: ./deploy.sh <what-if|deploy|seed-counter>' >&2
     exit 1
     ;;
 esac
 
-if [[ "$action" == 'publish' || "$action" == 'seed-counter' ]]; then
+if [[ "$action" == 'seed-counter' ]]; then
   exit 0
 fi
 
