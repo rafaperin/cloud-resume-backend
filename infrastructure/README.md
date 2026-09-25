@@ -10,7 +10,7 @@ This deployment creates the development resource group, static-website storage a
 - Region: East US 2
 - Tags: Project, Environment, ManagedBy, and Owner
 - Frontend storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with `index.html` and `404.html` as its default and error documents
-- Optional Azure Storage custom-domain mapping, configured through `CUSTOM_DOMAIN_NAME`
+- Cloudflare-managed frontend custom domain, configured through `CUSTOM_DOMAIN_NAME` for Function App CORS
 - Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 400 RU/s
 - Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `Count=0`
 - Azure Functions: a Linux Flex Consumption (`FC1`) plan and a Python 3.13 Function App with a system-assigned managed identity
@@ -39,13 +39,11 @@ az ad signed-in-user show --query id --output tsv
 
 The Bicep editor does not load .env files automatically. The parameter file uses a non-secret sentinel GUID so editor validation succeeds. Use deploy.sh for all deployments; it verifies and loads the root .env file before calling Azure CLI.
 
-## Configure a custom domain
+## Configure the frontend custom domain
 
-Set `CUSTOM_DOMAIN_NAME` in the root `.env` to the custom **subdomain**, without `https://`, a path, or a port. A non-empty value is the desired Azure Storage custom-domain mapping; Bicep manages that mapping on every deployment. Leave the value empty when Azure Storage custom-domain mapping is not required.
+Set `CUSTOM_DOMAIN_NAME` in the root `.env` to the public frontend **subdomain**, without `https://`, a path, or a port. Bicep uses this value only to configure the Function App CORS origin. It does not register a custom domain with Azure Storage.
 
-The domain must be a lowercase subdomain, such as `www.example.com`; root domains, such as `example.com`, are not supported by Azure Storage custom-domain mapping.
-
-Before the first deployment with a custom domain, create a public **DNS-only** CNAME record in Cloudflare for `asverify.<CUSTOM_DOMAIN_NAME>` that targets `asverify.<static-website-host>`. Obtain the static-website host from the deployment output:
+Configure the public hostname and HTTPS in Cloudflare. Point the Cloudflare record to the static-website host:
 
 ~~~sh
 az deployment sub show \
@@ -54,9 +52,7 @@ az deployment sub show \
   --output tsv
 ~~~
 
-After Bicep registers the domain, replace the temporary validation record with a CNAME from `CUSTOM_DOMAIN_NAME` to the static-website host. You can then proxy that record through Cloudflare to provide visitor-facing HTTPS and redirects. Azure must be able to resolve the temporary validation record publicly.
-
-Azure Storage does not provide a certificate for the custom domain. Configure Cloudflare to use an encrypted origin connection; do not use Flexible mode because this storage account requires HTTPS. Full (strict) requires an origin certificate that matches the custom domain, which Azure Storage does not provide.
+Use a CNAME from `CUSTOM_DOMAIN_NAME` to that host and configure Cloudflare TLS for the visitor-facing endpoint. Azure Storage custom-domain validation is deliberately outside this deployment, so it cannot block backend updates.
 
 ## Preview
 

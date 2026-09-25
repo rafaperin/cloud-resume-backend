@@ -23,17 +23,12 @@ param ownerTag string
 @description('Microsoft Entra object ID of the user who deploys frontend files.')
 param deployerPrincipalId string
 
-@description('Optional custom subdomain to map to the static website, without a scheme or path.')
-param customDomainName string
-
 var storageBlobDataContributorRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 )
 
 var hasDeployerPrincipalId = deployerPrincipalId != '00000000-0000-0000-0000-000000000000'
-var hasCustomDomain = !empty(customDomainName)
-
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
@@ -56,12 +51,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     minimumTlsVersion: 'TLS1_2'
     publicNetworkAccess: 'Enabled'
     supportsHttpsTrafficOnly: true
-    ...(hasCustomDomain ? {
-      customDomain: {
-        name: customDomainName
-        useSubDomainName: true
-      }
-    } : {})
   }
 }
 
@@ -89,4 +78,3 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-08-01'
 
 output storageAccountName string = storageAccount.name
 output staticWebsiteUrl string = storageAccount.properties.primaryEndpoints.web
-output customDomainName string = customDomainName
