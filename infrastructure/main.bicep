@@ -26,12 +26,16 @@ param deployerPrincipalId string
 @description('Optional public frontend subdomain, without a scheme or path, used as the Function App CORS origin.')
 param customDomainName string = ''
 
+@description('GitHub Actions OIDC subject for the frontend deployment identity.')
+param frontendGitHubOidcSubject string = ''
+
 var storageAccountName = 'stcrdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var functionStorageAccountName = 'stfuncdeveus2${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var cosmosAccountName = 'cosmos-cloudresume-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var functionAppName = 'func-cr-dev-eus2-${take(uniqueString(subscription().id, resourceGroupName), 11)}'
 var functionPlanName = 'plan-cr-dev-eus2'
 var functionAppResourceId = '${subscription().id}/resourceGroups/${resourceGroupName}/providers/Microsoft.Web/sites/${functionAppName}'
+var frontendDeploymentIdentityName = 'id-cloudresume-frontend-github'
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
@@ -41,6 +45,16 @@ resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
     Environment: environmentTag
     ManagedBy: 'iac'
     Owner: ownerTag
+  }
+}
+
+module frontendDeploymentIdentity './frontend-deployment-identity.bicep' = {
+  name: 'frontendDeploymentIdentity'
+  scope: resourceGroup
+  params: {
+    location: location
+    identityName: frontendDeploymentIdentityName
+    githubOidcSubject: frontendGitHubOidcSubject
   }
 }
 
@@ -54,6 +68,7 @@ module storageAccount './storage.bicep' = {
     environmentTag: environmentTag
     ownerTag: ownerTag
     deployerPrincipalId: deployerPrincipalId
+    frontendDeploymentPrincipalId: frontendDeploymentIdentity.outputs.principalId
   }
 }
 

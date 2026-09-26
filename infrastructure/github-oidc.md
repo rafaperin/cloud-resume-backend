@@ -25,6 +25,8 @@ Configure these repository secrets from the deployment identity and selected Azu
 - `AZURE_TENANT_ID`
 - `AZURE_SUBSCRIPTION_ID`
 
+Configure `FRONTEND_GITHUB_OIDC_SUBJECT` as a repository secret containing the immutable GitHub OIDC subject for `cloud-resume-frontend`'s `main` branch. The frontend deployment identity's federated credential accepts only that subject.
+
 Configure the deployment principal as a repository secret, because Bicep reads it from an environment variable during workflow execution:
 
 - `DEPLOYER_PRINCIPAL_ID`

@@ -10,6 +10,7 @@ This deployment creates the development resource group, static-website storage a
 - Region: East US 2
 - Tags: Project, Environment, ManagedBy, and Owner
 - Frontend storage: StorageV2, Standard_LRS, Hot access tier, HTTPS-only, TLS 1.2, and static website hosting with `index.html` and `404.html` as its default and error documents
+- Frontend deployment: a user-assigned GitHub Actions OIDC identity with Storage Blob Data Contributor scoped only to frontend storage
 - Cloudflare-managed frontend custom domain, configured through `CUSTOM_DOMAIN_NAME` for Function App CORS
 - Cosmos DB Table API: one East US 2 region, lifetime free tier enabled, and a `visitorcounter` table at 400 RU/s
 - Visitor counter data: a Cosmos DB Built-in Data Contributor assignment for the deploying identity and an idempotent seed command that creates `PartitionKey=resume`, `RowKey=counter`, and `Count=0`
@@ -20,7 +21,7 @@ This deployment creates the development resource group, static-website storage a
 
 The two Standard_LRS storage accounts are usage-billed. The separate Function backing account is required by Azure Functions and keeps runtime and deployment access away from the public website files. Cosmos DB is capped at 400 RU/s, the minimum manual provisioned throughput for this Table API workload. This remains within the lifetime free tier's first 1,000 RU/s and 25 GB allowance. No capacity beyond these limits is provisioned. Only one free-tier Cosmos DB account is allowed per subscription; if it has already been used, the deployment fails rather than creating a paid account.
 
-The templates do not contain subscription IDs, tenant IDs, principal IDs, storage keys, connection strings, or deployment-specific resource names. The ignored root `.env` supplies the deploying user’s principal ID at deployment time. Root deployment outputs contain only the names and public endpoints required by `deploy.sh`; identity and resource IDs remain internal to the deployment.
+The templates do not contain subscription IDs, tenant IDs, principal IDs, storage keys, connection strings, or deployment-specific resource names. The ignored root `.env` supplies the deploying user’s principal ID at deployment time. The backend deployment workflow supplies the frontend repository's OIDC subject as a secret. Root deployment outputs contain only the names and public endpoints required by `deploy.sh`; identity and resource IDs remain internal to the deployment.
 
 The Function App uses 512 MB on-demand instances, has no always-ready instances, and is capped at 10 instances. Flex Consumption provides a monthly on-demand free grant of 250,000 executions and 100,000 GB-seconds per subscription, but it is a usage-billed service after that allowance. This configuration limits scale but does not impose a spending cap; review the Azure estimate before deployment.
 

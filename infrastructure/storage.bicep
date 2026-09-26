@@ -23,12 +23,16 @@ param ownerTag string
 @description('Microsoft Entra object ID of the user who deploys frontend files.')
 param deployerPrincipalId string
 
+@description('Principal ID of the frontend GitHub Actions deployment identity.')
+param frontendDeploymentPrincipalId string = ''
+
 var storageBlobDataContributorRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 )
 
 var hasDeployerPrincipalId = deployerPrincipalId != '00000000-0000-0000-0000-000000000000'
+var hasFrontendDeploymentPrincipalId = !empty(frontendDeploymentPrincipalId)
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
@@ -61,6 +65,16 @@ resource storageBlobDataContributor 'Microsoft.Authorization/roleAssignments@202
     principalId: deployerPrincipalId
     roleDefinitionId: storageBlobDataContributorRoleDefinitionId
     principalType: 'User'
+  }
+}
+
+resource frontendStorageBlobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (hasFrontendDeploymentPrincipalId) {
+  scope: storageAccount
+  name: guid(storageAccount.id, frontendDeploymentPrincipalId, storageBlobDataContributorRoleDefinitionId)
+  properties: {
+    principalId: frontendDeploymentPrincipalId
+    roleDefinitionId: storageBlobDataContributorRoleDefinitionId
+    principalType: 'ServicePrincipal'
   }
 }
 

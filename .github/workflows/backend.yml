@@ -95,6 +95,7 @@ jobs:
         env:
           DEPLOYER_PRINCIPAL_ID: ${{ secrets.DEPLOYER_PRINCIPAL_ID }}
           CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
+          FRONTEND_GITHUB_OIDC_SUBJECT: ${{ secrets.FRONTEND_GITHUB_OIDC_SUBJECT }}
         run: |
           az deployment sub what-if \
             --name "cloudresume-${GITHUB_RUN_ID}-whatif" \
@@ -109,6 +110,7 @@ jobs:
         env:
           DEPLOYER_PRINCIPAL_ID: ${{ secrets.DEPLOYER_PRINCIPAL_ID }}
           CUSTOM_DOMAIN_NAME: ${{ vars.CUSTOM_DOMAIN_NAME }}
+          FRONTEND_GITHUB_OIDC_SUBJECT: ${{ secrets.FRONTEND_GITHUB_OIDC_SUBJECT }}
         run: |
           function_app_name=$(
             az deployment sub create \
